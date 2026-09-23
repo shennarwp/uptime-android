@@ -13,10 +13,6 @@ This is the Android client backlog. Items describe work that belongs in this app
 
 ## High priority app work
 
-- [x] Add a real error state for an expired/invalid token and automatically return to the login dialog on HTTP 401.
-- [x] Add input validation for URL syntax, target name length, and the backend's six-field cron syntax before submitting.
-- [x] Add JVM contract tests for API URL normalization and target validation.
-- [x] Format the dashboard’s last-sync timestamp consistently with target check timestamps.
 - [ ] Replace the current simple status bars with accessible content descriptions and a compact response-time/status legend.
 - [ ] Add a biometric app lock using `BiometricPrompt`; keep the Keystore token encryption independent from the lock state.
 - [ ] Review notification permission denial and notification-channel settings in the Settings screen.
@@ -33,7 +29,8 @@ This is the Android client backlog. Items describe work that belongs in this app
 
 ## Deliberately deferred
 
-- [ ] Incident history UI, pending an Incidents API from the backend.
+- [ ] Add an incident view for recent monitoring events once the backend exposes incident data.
+- [ ] Open the app’s incident view when the user taps a monitoring notification.
 - [ ] On-device monitoring, FCM, ntfy, Firebase, Play Store release, and multi-account support.
 
 ## Backend context to keep visible
@@ -46,13 +43,10 @@ This is the Android client backlog. Items describe work that belongs in this app
 
 ## UI and project follow-ups
 
-- [x] Match the refresh, settings, and login/logout header controls more closely to the reference web app.
-- [x] Replace target edit and delete text actions with accessible icon buttons.
-- [x] Reduce target-card height by tightening its internal spacing and bottom padding.
-- [x] Add space below the header so scrolling content does not appear to touch it.
-- [x] Expand the README with the app icon, development requirements, and an About section.
-- [x] Scale the launcher icon graphic down slightly within its background.
-- [x] Add pull-to-refresh to the target dashboard.
-- [x] Style the add-target and settings sheets with system light/dark backgrounds, green focused-input accents, and green primary buttons.
+- [ ] Keep app documentation current as setup, behavior, and release steps change.
+- [ ] Expand automated test coverage for dashboard behavior, notification navigation, and view-model logic.
+- [ ] Resolve remaining Android Studio/IDE warnings where practical.
+- [ ] Ensure status-bar icons and text use a dark, readable appearance in light mode; verify the app controls the system-bar icon appearance.
+- [ ] Render check history across the full target-card width; fill missing checks with gray placeholders and place the newest check on the right, matching the uptime web app.
 - [ ] Add Lefthook-managed local checks. Lefthook does not require `package.json`; use its native binary installer and configure Gradle tasks directly.
 - [ ] Add GitHub workflows for Renovate, test/build validation, and APK builds on version tags. Deferred for later.
