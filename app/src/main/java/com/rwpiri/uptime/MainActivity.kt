@@ -6,9 +6,11 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,10 +34,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
@@ -44,9 +46,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Logout
-import androidx.compose.material.icons.outlined.Login
+import androidx.compose.material.icons.automirrored.outlined.Login
+import androidx.compose.material.icons.automirrored.outlined.Logout
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.runtime.Composable
@@ -133,12 +138,24 @@ private fun UptimeScreen() {
     var deleting by remember { mutableStateOf<TargetWithChecks?>(null) }
     LaunchedEffect(state.requiresLogin) { if (state.requiresLogin) showLogin = true }
     LaunchedEffect(state.loggedIn) { if (state.loggedIn) showLogin = false }
+    val headerDividerColor = MaterialTheme.colorScheme.outline
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp).height(64.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(1.dp)
+                    .drawBehind {
+                        val y = size.height - 1.dp.toPx()
+                        drawLine(
+                            color = headerDividerColor,
+                            start = Offset(0f, y),
+                            end = Offset(size.width, y),
+                            strokeWidth = 1.dp.toPx(),
+                        )
+                    },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = if (isSystemInDarkTheme()) Color(0xFF181818) else Color.White,
                     titleContentColor = MaterialTheme.colorScheme.onSurface,
@@ -158,7 +175,7 @@ private fun UptimeScreen() {
                     HeaderIconButton(Icons.Outlined.Refresh, "Refresh", model::refresh)
                     HeaderIconButton(Icons.Outlined.Settings, "Settings") { showSettings = true }
                     HeaderIconButton(
-                        if (state.loggedIn) Icons.Outlined.Logout else Icons.Outlined.Login,
+                        if (state.loggedIn) Icons.AutoMirrored.Outlined.Logout else Icons.AutoMirrored.Outlined.Login,
                         if (state.loggedIn) "Logout" else "Login",
                     ) { if (state.loggedIn) model.logout() else showLogin = true }
                 },
@@ -183,6 +200,7 @@ private fun UptimeScreen() {
                 modifier = Modifier.padding(padding),
                 onEdit = { editing = it },
                 onDelete = { deleting = it },
+                onRefresh = { model.refresh() },
             )
         }
     }
@@ -196,24 +214,28 @@ private fun UptimeScreen() {
     if (creating) TargetEditorSheet(null, onDismiss = { creating = false }, onSave = { model.create(it); creating = false })
     editing?.let { target -> TargetEditorSheet(target, onDismiss = { editing = null }, onSave = { model.update(target.id, it); editing = null }) }
     deleting?.let { target ->
-        AlertDialog(
-            onDismissRequest = { deleting = null },
-            title = { Text("Delete ${target.name}?") },
-            text = { Text("This removes the target and its server-side checks.") },
-            confirmButton = { TextButton(onClick = { model.delete(target.id); deleting = null }) { Text("Delete") } },
-            dismissButton = { TextButton(onClick = { deleting = null }) { Text("Cancel") } },
+        DeleteTargetSheet(
+            targetName = target.name,
+            onDismiss = { deleting = null },
+            onConfirm = { model.delete(target.id); deleting = null },
         )
     }
 }
 
 @Composable
 private fun HeaderIconButton(icon: ImageVector, description: String, onClick: () -> Unit) {
-    IconButton(onClick = onClick) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier
+            .padding(horizontal = 2.dp)
+            .clip(RoundedCornerShape(6.dp)),
+    ) {
         Icon(icon, contentDescription = description, tint = MaterialTheme.colorScheme.onSurface)
     }
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 private fun Dashboard(
     targets: List<TargetWithChecks>,
     error: String?,
@@ -222,25 +244,31 @@ private fun Dashboard(
     modifier: Modifier,
     onEdit: (TargetWithChecks) -> Unit,
     onDelete: (TargetWithChecks) -> Unit,
+    onRefresh: () -> Unit,
 ) {
     Column(modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-        if (refreshing) LinearProgressIndicator(Modifier.fillMaxWidth())
         error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(vertical = 8.dp)) }
-        LazyColumn(
+        PullToRefreshBox(
+            isRefreshing = refreshing,
+            onRefresh = onRefresh,
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp),
         ) {
-            items(targets, key = { it.id }) { target -> TargetCard(target, onEdit, onDelete) }
-            item {
-                Row(
-                    Modifier.fillMaxWidth().padding(top = 4.dp, end = 72.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("${targets.size} targets", style = MaterialTheme.typography.titleMedium)
-                    lastSyncAt?.let {
-                        Text("Last sync: ${it.replace('T', ' ').substringBefore('.')}", style = MaterialTheme.typography.bodySmall)
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
+            ) {
+                items(targets, key = { it.id }) { target -> TargetCard(target, onEdit, onDelete) }
+                item {
+                    Row(
+                        Modifier.fillMaxWidth().padding(top = 2.dp, end = 72.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("${targets.size} targets", style = MaterialTheme.typography.bodySmall)
+                        lastSyncAt?.let {
+                            Text("Last sync: ${formatDateTime(it)}", style = MaterialTheme.typography.bodySmall)
+                        }
                     }
                 }
             }
@@ -265,28 +293,51 @@ private fun TargetCard(target: TargetWithChecks, onEdit: (TargetWithChecks) -> U
         border = BorderStroke(if (isUp == null) 1.dp else 2.dp, borderColor),
         shape = MaterialTheme.shapes.medium,
     ) {
-        Column(Modifier.padding(16.dp)) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(target.name, style = MaterialTheme.typography.titleMedium)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            target.name,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Spacer(Modifier.size(8.dp))
+                        StatusBadge(isUp)
+                    }
                     Text(target.url, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
                 }
-                StatusBadge(isUp)
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(6.dp))
             HistoryBar(target.checks)
-            TargetMetadata(latest = latest, certExpiresAt = target.certExpiresAt)
+            TargetMetadata(
+                latest = latest,
+                certExpiresAt = target.certExpiresAt,
+            )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = { onEdit(target) }) { Text("Edit") }
-                TextButton(onClick = { onDelete(target) }) { Text("Delete") }
+                IconButton(onClick = { onEdit(target) }, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Outlined.Edit, contentDescription = "Edit ${target.name}", tint = MaterialTheme.colorScheme.onSurface)
+                }
+                IconButton(onClick = { onDelete(target) }, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Outlined.Delete, contentDescription = "Delete ${target.name}", tint = MaterialTheme.colorScheme.onSurface)
+                }
             }
         }
     }
 }
 
 @Composable
-private fun TargetMetadata(latest: Check?, certExpiresAt: String?) {
-    Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+private fun TargetMetadata(
+    latest: Check?,
+    certExpiresAt: String?,
+) {
+    Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(0.dp)) {
         latest?.let { check ->
             MetadataLine(label = "Last Check: ", value = formatDateTime(check.checkedAt))
         }
@@ -317,13 +368,16 @@ private fun MetadataLine(
 }
 
 private val displayDateFormatter = DateTimeFormatter
-    .ofPattern("EEE, dd MMM yyyy HH:mm:ss", Locale.ENGLISH)
+    .ofPattern("EEE, dd MMM yyyy HH:mm", Locale.ENGLISH)
     .withZone(ZoneId.systemDefault())
 
 private fun formatDateTime(value: String): String = runCatching {
     displayDateFormatter.format(Instant.parse(value))
 }.getOrElse {
-    value.replace('T', ' ').substringBefore('.').removeSuffix("Z")
+    value.replace('T', ' ')
+        .substringBefore('.')
+        .removeSuffix("Z")
+        .replace(Regex("(:\\d{2}):\\d{2}$")) { match -> match.groupValues[1] }
 }
 
 private enum class CertificateLevel { OK, WARN, CRITICAL }
@@ -416,7 +470,14 @@ private fun LoginDialog(onDismiss: () -> Unit, onLogin: (String) -> Unit, error:
             }
         },
         confirmButton = { TextButton(enabled = token.isNotBlank(), onClick = { onLogin(token) }) { Text("Verify") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+            ) { Text("Cancel") }
+        },
     )
 }
 
@@ -426,7 +487,12 @@ private fun SettingsSheet(initialUrl: String, onDismiss: () -> Unit, onSave: (St
     var url by rememberSaveable(initialUrl) { mutableStateOf(initialUrl) }
     var error by rememberSaveable(initialUrl) { mutableStateOf<String?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+    ) {
         Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Settings", style = MaterialTheme.typography.headlineSmall)
             OutlinedTextField(
@@ -436,13 +502,27 @@ private fun SettingsSheet(initialUrl: String, onDismiss: () -> Unit, onSave: (St
                 placeholder = { Text("https://example.com") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF22C55E),
+                    focusedLabelColor = Color(0xFF22C55E),
+                    cursorColor = Color(0xFF22C55E),
+                ),
             )
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             Button(enabled = url.isNotBlank(), onClick = {
                 error = com.rwpiri.uptime.data.InputValidation.serverUrl(url)
                 if (error == null) onSave(url)
-            }, modifier = Modifier.fillMaxWidth()) { Text("Save") }
-            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Cancel") }
+            }, modifier = Modifier.fillMaxWidth(), colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF22C55E),
+                contentColor = Color.White,
+            )) { Text("Save") }
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+            ) { Text("Cancel") }
             Spacer(Modifier.height(24.dp))
         }
     }
@@ -456,12 +536,22 @@ private fun TargetEditorSheet(target: TargetWithChecks?, onDismiss: () -> Unit, 
     var url by rememberSaveable(target?.id) { mutableStateOf(target?.url.orEmpty()) }
     var schedule by rememberSaveable(target?.id) { mutableStateOf(target?.schedule ?: "0 */5 * * * *") }
     var error by rememberSaveable(target?.id) { mutableStateOf<String?>(null) }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+    ) {
         Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(if (target == null) "Add target" else "Edit target", style = MaterialTheme.typography.headlineSmall)
-            OutlinedTextField(name, { name = it }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            if (target == null) OutlinedTextField(url, { url = it }, label = { Text("URL") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(schedule, { schedule = it }, label = { Text("Cron schedule") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            val inputColors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color(0xFF22C55E),
+                focusedLabelColor = Color(0xFF22C55E),
+                cursorColor = Color(0xFF22C55E),
+            )
+            OutlinedTextField(name, { name = it }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth(), colors = inputColors)
+            if (target == null) OutlinedTextField(url, { url = it }, label = { Text("URL") }, singleLine = true, modifier = Modifier.fillMaxWidth(), colors = inputColors)
+            OutlinedTextField(schedule, { schedule = it }, label = { Text("Cron schedule") }, singleLine = true, modifier = Modifier.fillMaxWidth(), colors = inputColors)
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             Button(
                 enabled = name.isNotBlank() && schedule.isNotBlank() && (target != null || url.isNotBlank()),
@@ -471,7 +561,54 @@ private fun TargetEditorSheet(target: TargetWithChecks?, onDismiss: () -> Unit, 
                     if (error == null) onSave(draft)
                 },
                 modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF22C55E),
+                    contentColor = Color.White,
+                ),
             ) { Text("Save") }
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+            ) { Text("Cancel") }
+            Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DeleteTargetSheet(targetName: String, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+    ) {
+        Column(
+            Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text("Delete $targetName?", style = MaterialTheme.typography.headlineSmall)
+            Text("This removes the target and its server-side checks.")
+            Button(
+                onClick = onConfirm,
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFEF4444),
+                    contentColor = Color.White,
+                ),
+            ) { Text("Delete") }
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+            ) { Text("Cancel") }
             Spacer(Modifier.height(24.dp))
         }
     }

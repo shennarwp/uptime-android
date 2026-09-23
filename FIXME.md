@@ -16,7 +16,7 @@ This is the Android client backlog. Items describe work that belongs in this app
 - [x] Add a real error state for an expired/invalid token and automatically return to the login dialog on HTTP 401.
 - [x] Add input validation for URL syntax, target name length, and the backend's six-field cron syntax before submitting.
 - [x] Add JVM contract tests for API URL normalization and target validation.
-- [x] Add a visible “last successful sync” timestamp.
+- [x] Format the dashboard’s last-sync timestamp consistently with target check timestamps.
 - [ ] Replace the current simple status bars with accessible content descriptions and a compact response-time/status legend.
 - [ ] Add a biometric app lock using `BiometricPrompt`; keep the Keystore token encryption independent from the lock state.
 - [ ] Review notification permission denial and notification-channel settings in the Settings screen.
@@ -24,7 +24,7 @@ This is the Android client backlog. Items describe work that belongs in this app
 
 ## Medium priority app work
 
-- [ ] Add pull-to-refresh and a target detail screen once the product needs more than the dashboard history window.
+- [ ] Add a target detail screen once the product needs more than the dashboard history window.
 - [ ] Add explicit certificate renewal handling so a renewed certificate resets the local reminder state immediately.
 - [ ] Add a small worker diagnostics screen showing `lastRun`, last known state per target, and the last worker failure.
 - [ ] Add an optional Glance widget only after the dashboard and worker behavior are stable.
@@ -43,3 +43,16 @@ This is the Android client backlog. Items describe work that belongs in this app
 - [ ] Add external heartbeat monitoring because the monitor cannot report its own outage.
 - [ ] Keep the backend README and generated Swagger contract synchronized; the Android client should follow generated Swagger, not stale prose.
 - [ ] Add a repository LICENSE if the project is intended for redistribution.
+
+## UI and project follow-ups
+
+- [x] Match the refresh, settings, and login/logout header controls more closely to the reference web app.
+- [x] Replace target edit and delete text actions with accessible icon buttons.
+- [x] Reduce target-card height by tightening its internal spacing and bottom padding.
+- [x] Add space below the header so scrolling content does not appear to touch it.
+- [x] Expand the README with the app icon, development requirements, and an About section.
+- [x] Scale the launcher icon graphic down slightly within its background.
+- [x] Add pull-to-refresh to the target dashboard.
+- [x] Style the add-target and settings sheets with system light/dark backgrounds, green focused-input accents, and green primary buttons.
+- [ ] Add Lefthook-managed local checks. Lefthook does not require `package.json`; use its native binary installer and configure Gradle tasks directly.
+- [ ] Add GitHub workflows for Renovate, test/build validation, and APK builds on version tags. Deferred for later.
