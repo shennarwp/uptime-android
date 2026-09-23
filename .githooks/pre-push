@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+gitleaks_bin="${GITLEAKS_BIN:-gitleaks}"
+
+if ! command -v "$gitleaks_bin" >/dev/null 2>&1; then
+  cat >&2 <<'EOF'
+Gitleaks is required before pushing, but it was not found on PATH.
+Install it from https://github.com/gitleaks/gitleaks#installation and retry.
+To override the executable location, set GITLEAKS_BIN.
+EOF
+  exit 1
+fi
+
+echo "Running Gitleaks before push..."
+
+# pre-push supplies one line per ref on stdin:
+# <local ref> <local sha> <remote ref> <remote sha>
+while read -r _local_ref local_sha _remote_ref remote_sha; do
+  # A deleted remote ref has no new commits to inspect.
+  if [[ "$local_sha" =~ ^0+$ ]]; then
+    continue
+  fi
+
+  if [[ "$remote_sha" =~ ^0+$ ]]; then
+    log_opts="$local_sha"
+  else
+    log_opts="$remote_sha..$local_sha"
+  fi
+
+  # `detect --log-opts` works with both older and current Gitleaks releases.
+  if ! "$gitleaks_bin" detect --log-opts="$log_opts" --redact --verbose --exit-code 1; then
+    cat >&2 <<'EOF'
+Push blocked: Gitleaks detected a possible secret in the commits being pushed.
+Review the findings, remove or rotate the secret, then retry the push.
+EOF
+    exit 1
+  fi
+done
+
+echo "Gitleaks passed."

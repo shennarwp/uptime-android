@@ -1,0 +1,29 @@
+*.iml
+
+# Android Studio and IntelliJ project state
+/.idea/
+/.fleet/
+*.ipr
+*.iws
+out/
+
+# Gradle and Kotlin generated state
+.gradle/
+**/build/
+.kotlin/
+/local.properties
+
+# Android build output and native tooling
+/captures/
+.DS_Store
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+
+# Local signing material and environment files
+*.jks
+*.keystore
+*.p12
+.env
+.env.*
