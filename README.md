@@ -1,6 +1,16 @@
 # Uptime Android
 
+<p align="center"><img src="docs/uptime-icon.svg" alt="Uptime app icon" width="96" height="96"></p>
+
 Native Android client for the existing self-hosted Uptime Monitor backend. The app is Kotlin and Jetpack Compose, with a small manual dependency container. It does not run checks on the phone: the server remains the source of monitoring data.
+
+## Requirements
+
+- Android Studio with support for Android Gradle Plugin 9.4.1.
+- JDK 17 or a newer JDK supported by the installed Android Gradle Plugin.
+- Android SDK Platform 37 and the SDK build tools installed through Android Studio.
+- A connected Android device or emulator running Android 8.0 (API 26) or newer.
+- No system Gradle installation is required; use the checked-in Gradle wrapper.
 
 ## Current scope
 
@@ -54,3 +64,7 @@ The pre-push hook requires [Gitleaks](https://github.com/gitleaks/gitleaks#insta
 - `app/src/main/java/com/rwpiri/uptime/MainActivity.kt` - Compose dashboard and edit flows.
 - `app/src/main/java/com/rwpiri/uptime/AlertWorker.kt` - periodic alert evaluation and notification channel.
 - `FIXME.md` - implementation and server-verification backlog.
+
+## About
+
+Uptime Android is an independently maintained mobile client for the self-hosted Uptime Monitor service. Monitoring and alert evaluation remain on the server; the Android app provides a dashboard, target management, and local notifications. See `FIXME.md` for remaining work and deployment assumptions.
