@@ -1,0 +1,13 @@
+# Store text files with LF and use LF in checkouts on every platform.
+* text=auto eol=lf
+
+# Windows command scripts need CRLF when checked out on Windows.
+*.bat text eol=crlf
+
+# Keep generated and packaged binaries untouched.
+*.apk binary
+*.aab binary
+*.jar binary
+*.jks binary
+*.keystore binary
+*.webp binary
