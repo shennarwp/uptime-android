@@ -34,6 +34,10 @@ The Settings screen accepts either the server origin (`https://monitor.example`)
 
 The token is excluded from Android Auto Backup. A biometric lock is deliberately left as a follow-up because the token encryption and the app lock are separate concerns.
 
+## Windows and Linux development
+
+The repository keeps text files as LF line endings across Windows, WSL, and Linux. `.gitattributes` and `.editorconfig` set this for Git and supported editors; Windows batch scripts use CRLF. Use `gradlew.bat` on Windows or `./gradlew` on Linux/WSL. Each machine should generate its own ignored `local.properties` for the Android SDK path.
+
 ## Secret scanning
 
 Enable the tracked Git hooks once per checkout:
