@@ -21,6 +21,7 @@ data class UptimeUiState(
     val error: String? = null,
     val lastSyncAt: String? = null,
     val requiresLogin: Boolean = false,
+    val refreshing: Boolean = false,
 )
 
 class UptimeViewModel(private val repository: UptimeRepository) : ViewModel() {
@@ -30,14 +31,16 @@ class UptimeViewModel(private val repository: UptimeRepository) : ViewModel() {
     init { refresh() }
 
     fun refresh() = viewModelScope.launch {
-        _state.value = _state.value.copy(loading = true, error = null)
+        val previous = _state.value
+        val hasContent = previous.serverUrl.isNotBlank()
+        _state.value = previous.copy(loading = !hasContent, refreshing = hasContent, error = null)
         runCatching {
             val url = repository.serverUrl()
             val loggedIn = repository.getToken() != null
             if (url.isBlank()) UptimeUiState(loading = false, serverUrl = url, loggedIn = loggedIn)
             else UptimeUiState(false, repository.targets(), url, loggedIn, lastSyncAt = Instant.now().toString())
-        }.onSuccess { _state.value = it }
-            .onFailure { _state.value = _state.value.copy(loading = false, error = it.message ?: "Request failed") }
+        }.onSuccess { _state.value = it.copy(refreshing = false) }
+            .onFailure { _state.value = _state.value.copy(loading = false, refreshing = false, error = it.message ?: "Request failed") }
     }
 
     fun saveServerUrl(url: String) = viewModelScope.launch {

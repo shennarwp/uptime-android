@@ -15,6 +15,7 @@ out/
 
 # Android build output and native tooling
 /captures/
+/app/release/
 .DS_Store
 .externalNativeBuild/
 .cxx/
