@@ -432,7 +432,7 @@ private fun TargetCard(target: TargetWithChecks, onEdit: (TargetWithChecks) -> U
                     Icon(
                         painterResource(R.drawable.edit_icon),
                         contentDescription = "Edit ${target.name}",
-                        tint = Color.Unspecified,
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 IconButton(onClick = { onDelete(target) }, modifier = Modifier.size(36.dp)) {
@@ -535,7 +535,7 @@ private fun HistoryBar(checks: List<Check>) {
                     .weight(1f)
                     .fillMaxSize()
                     .clip(RoundedCornerShape(2.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                    .background(if (isSystemInDarkTheme()) Color(0xFF2A2A2A) else Color(0xFFE5E7EB)),
             )
         }
         chronological.forEach { check ->
@@ -618,7 +618,7 @@ private fun IncidentView(
                     ) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Text(incidentLabels[incident.type] ?: incident.type, fontWeight = FontWeight.Bold)
-                                Text(incident.targetName, color = Color.Black)
+                                Text(incident.targetName, color = MaterialTheme.colorScheme.onSurface)
                                 Text(formatDateTime(incident.timestamp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 incident.cause?.takeIf(String::isNotBlank)?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                             }
