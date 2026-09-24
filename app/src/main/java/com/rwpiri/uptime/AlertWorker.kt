@@ -78,7 +78,7 @@ class AlertWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
         ) return
         NotificationChannels.ensure(applicationContext)
         val notification = NotificationCompat.Builder(applicationContext, NotificationChannels.ALERTS)
-            .setSmallIcon(com.rwpiri.uptime.R.drawable.notification_icon)
+            .setSmallIcon(R.drawable.notification_icon)
             .setContentTitle(title)
             .setContentText(text)
             .setContentIntent(

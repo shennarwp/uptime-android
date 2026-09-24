@@ -23,7 +23,7 @@ interface UptimeApi {
     suspend fun getTargets(): List<TargetWithChecks>
 
     @POST("auth/verify")
-    suspend fun verifyToken(@Header("Authorization") authorization: String): Unit
+    suspend fun verifyToken(@Header("Authorization") authorization: String)
 
     @POST("targets")
     suspend fun createTarget(

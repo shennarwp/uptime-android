@@ -1,6 +1,4 @@
-# Uptime Android
-
-<p align="center"><img src="docs/uptime-icon.svg" alt="Uptime app icon" width="96" height="96"></p>
+# <img src="docs/uptime-icon.svg" alt="" width="40" height="40" /> Uptime Android
 
 Native Android client for the existing self-hosted Uptime Monitor backend. The app is Kotlin and Jetpack Compose, with a small manual dependency container. It does not run checks on the phone: the server remains the source of monitoring data.
 
@@ -25,12 +23,12 @@ Native Android client for the existing self-hosted Uptime Monitor backend. The a
 
 The client is configured for the Swagger contract currently in the sibling `uptime` repository:
 
-| Method | Path | Auth |
-| --- | --- | --- |
-| `GET` | `/api/v1/targets` | no |
-| `POST` | `/api/v1/auth/verify` | bearer token |
-| `POST` | `/api/v1/targets` | bearer token |
-| `PUT` | `/api/v1/target/{id}` | bearer token |
+| Method   | Path                  | Auth         |
+|----------|-----------------------|--------------|
+| `GET`    | `/api/v1/targets`     | no           |
+| `POST`   | `/api/v1/auth/verify` | bearer token |
+| `POST`   | `/api/v1/targets`     | bearer token |
+| `PUT`    | `/api/v1/target/{id}` | bearer token |
 | `DELETE` | `/api/v1/target/{id}` | bearer token |
 
 The Settings screen accepts either the server origin (`https://monitor.example`) or a complete `/api/v1` URL and normalizes it. The backend currently parses six-field cron expressions (seconds first), including descriptors such as `@hourly`; the client validates that shape before submission.

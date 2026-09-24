@@ -97,7 +97,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
-    private val openIncidents = androidx.compose.runtime.mutableStateOf(false)
+    private val openIncidents = mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
