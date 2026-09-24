@@ -1,7 +1,10 @@
 package com.rwpiri.uptime
 
 import com.rwpiri.uptime.data.InputValidation
+import com.rwpiri.uptime.data.Check
 import com.rwpiri.uptime.data.UptimeApiFactory
+import com.rwpiri.uptime.data.checksNewestFirst
+import com.rwpiri.uptime.data.latestCheck
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -26,4 +29,22 @@ class UptimeContractTest {
         assertNull(InputValidation.schedule("@hourly"))
         assertEquals("Enter a valid cron schedule", InputValidation.schedule("@bogus"))
     }
+
+    @Test fun ordersChecksByInstantRatherThanTimestampText() {
+        val olderInstantWithLaterLocalTime = check(1, "2026-09-24T12:30:00+02:00")
+        val newerInstant = check(2, "2026-09-24T11:00:00Z")
+
+        assertEquals(newerInstant, latestCheck(listOf(newerInstant, olderInstantWithLaterLocalTime)))
+        assertEquals(
+            listOf(newerInstant, olderInstantWithLaterLocalTime),
+            checksNewestFirst(listOf(olderInstantWithLaterLocalTime, newerInstant)),
+        )
+    }
+
+    private fun check(id: Long, checkedAt: String) = Check(
+        id = id,
+        targetId = 1,
+        checkedAt = checkedAt,
+        isUp = true,
+    )
 }

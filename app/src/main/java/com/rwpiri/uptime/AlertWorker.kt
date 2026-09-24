@@ -14,6 +14,8 @@ import androidx.work.WorkerParameters
 import com.rwpiri.uptime.data.Check
 import com.rwpiri.uptime.data.TargetWithChecks
 import com.rwpiri.uptime.data.WorkerState
+import com.rwpiri.uptime.data.latestCheck
+import com.rwpiri.uptime.data.parseCheckedAt
 import java.time.Duration
 import java.time.Instant
 import kotlin.math.ceil
@@ -32,8 +34,8 @@ class AlertWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
 
         if (!baseline) {
             targets.forEach { target ->
-                val checks = target.checks.filter { check -> lastRun == null || parseInstant(check.checkedAt)?.isAfter(lastRun) == true }
-                val newest = checks.maxByOrNull { it.checkedAt }
+                val checks = target.checks.filter { check -> lastRun == null || parseCheckedAt(check.checkedAt)?.isAfter(lastRun) == true }
+                val newest = latestCheck(checks)
                 if (newest != null) {
                     val oldState = nextStates[target.id.toString()]
                     if (newest.isUp && oldState == false) {
@@ -46,7 +48,7 @@ class AlertWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
             }
         } else {
             targets.forEach { target ->
-                target.checks.maxByOrNull { it.checkedAt }?.let { nextStates[target.id.toString()] = it.isUp }
+                latestCheck(target.checks)?.let { nextStates[target.id.toString()] = it.isUp }
             }
         }
 
@@ -57,7 +59,7 @@ class AlertWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
     }
 
     private fun certificateNotice(target: TargetWithChecks, now: Instant, sent: MutableMap<String, String>) {
-        val expiry = target.certExpiresAt?.let(::parseInstant) ?: return
+        val expiry = target.certExpiresAt?.let(::parseCheckedAt) ?: return
         val days = ceil(Duration.between(now, expiry).toHours() / 24.0).toInt()
         if (days > 30) return
         val key = target.id.toString()
@@ -122,8 +124,6 @@ class AlertWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
             .build()
         NotificationManagerCompat.from(applicationContext).notify(target.id.toInt(), notification)
     }
-
-    private fun parseInstant(value: String): Instant? = runCatching { Instant.parse(value) }.getOrNull()
 
     companion object { const val WORK_NAME = "uptime-alert-poll" }
 }
