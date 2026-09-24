@@ -85,6 +85,7 @@ class AlertWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
                 TaskStackBuilder.create(applicationContext).run {
                     addNextIntentWithParentStack(Intent(applicationContext, MainActivity::class.java).apply {
                         action = MainActivity.ACTION_OPEN_INCIDENTS
+                        putExtra(MainActivity.EXTRA_NOTIFICATION_TARGET_ID, target.id)
                     })
                     getPendingIntent(target.id.toInt(), android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE)
                 },
