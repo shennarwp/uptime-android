@@ -21,7 +21,6 @@ private val Context.settingsDataStore by preferencesDataStore(name = "uptime_set
 
 class SettingsStore(private val context: Context) {
     private val serverUrlKey = stringPreferencesKey("server_url")
-    val serverUrl = context.settingsDataStore.data
 
     suspend fun setServerUrl(value: String) = context.settingsDataStore.edit { it[serverUrlKey] = value.trim().trimEnd('/') }
     suspend fun getServerUrl(): String = context.settingsDataStore.data.first()[serverUrlKey].orEmpty()

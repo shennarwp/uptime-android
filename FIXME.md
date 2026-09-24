@@ -14,7 +14,7 @@ This is the Android client backlog. Items describe work that belongs in this app
 ## High priority app work
 
 - [ ] Replace the current simple status bars with accessible content descriptions and a compact response-time/status legend.
-- [ ] Add a biometric app lock using `BiometricPrompt`; keep the Keystore token encryption independent from the lock state.
+- [ ] Add a biometric app lock using `BiometricPrompt`; keep the Keystore token encryption independent of the lock state.
 - [ ] Review notification permission denial and notification-channel settings in the Settings screen.
 - [ ] Revisit alert noise: the current worker follows the requested “any new down check” behavior, but a retry threshold or flap suppression is likely better for daily use.
 
