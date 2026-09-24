@@ -474,6 +474,12 @@ private fun TabletDashboard(
                                 modifier = Modifier.weight(1f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
+                                color = when {
+                                    target.id == selectedId && isSystemInDarkTheme() -> Color.White
+                                    target.id == selectedId -> Color.Black
+                                    isSystemInDarkTheme() -> Color(0xFF9CA3AF)
+                                    else -> Color(0xFF6B7280)
+                                },
                                 fontWeight = if (target.id == selectedId) FontWeight.Bold else FontWeight.Normal,
                             )
                             Spacer(Modifier.size(8.dp))
