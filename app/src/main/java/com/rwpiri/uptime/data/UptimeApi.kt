@@ -14,6 +14,7 @@ import retrofit2.http.POST
 import retrofit2.http.PATCH
 import retrofit2.http.PUT
 import retrofit2.http.Path
+import retrofit2.http.Query
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import java.net.URI
 import java.net.URISyntaxException
@@ -46,6 +47,13 @@ interface UptimeApi {
 
     @GET("incidents")
     suspend fun getIncidents(@Header("Authorization") authorization: String): List<Incident>
+
+    @GET("incidents/latest")
+    suspend fun getLatestIncident(
+        @Header("Authorization") authorization: String,
+        @Query("target_id") targetId: Long,
+        @Query("type") type: String,
+    ): Incident
 
     @PATCH("incident/{id}/read")
     suspend fun markIncidentRead(

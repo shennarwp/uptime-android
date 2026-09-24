@@ -58,18 +58,22 @@ class UptimeViewModel(private val repository: UptimeRepository) : ViewModel() {
 
     fun logout() = viewModelScope.launch { repository.clearToken(); refresh() }
 
-    fun refreshIncidents(markReadForTargetId: Long? = null) = viewModelScope.launch {
+    fun refreshIncidents(
+        markReadForTargetId: Long? = null,
+        markReadIncidentType: String? = null,
+    ) = viewModelScope.launch {
         runCatching {
             val incidents = repository.incidents()
-            if (markReadForTargetId != null) {
-                for (incident in incidents.filter { it.targetId == markReadForTargetId && !it.isRead }) {
-                    repository.markIncidentRead(incident.id)
-                }
+            if (markReadForTargetId != null && markReadIncidentType != null) {
+                val incident = repository.latestIncident(markReadForTargetId, markReadIncidentType)
+                if (!incident.isRead) repository.markIncidentRead(incident.id)
             }
             incidents
         }.onSuccess { incidents ->
             _state.value = _state.value.copy(incidents = incidents.map { incident ->
-                if (incident.targetId == markReadForTargetId) incident.copy(isRead = true) else incident
+                if (incident.targetId == markReadForTargetId && incident.type == markReadIncidentType) {
+                    incident.copy(isRead = true)
+                } else incident
             })
         }.onFailure { error -> handleMutationError(error, "Unable to load incidents") }
     }

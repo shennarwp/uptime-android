@@ -36,8 +36,10 @@ class AlertWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
                 val newest = checks.maxByOrNull { it.checkedAt }
                 if (newest != null) {
                     val oldState = nextStates[target.id.toString()]
-                    if (newest.isUp && oldState == false) notify(target, "Recovered", "${target.name} is back up")
-                    if (!newest.isUp) notify(target, "Down", downMessage(target, newest))
+                    if (newest.isUp && oldState == false) {
+                        notify(target, "Recovered", "${target.name} is back up", "going_up")
+                    }
+                    if (!newest.isUp) notify(target, "Down", downMessage(target, newest), "going_down")
                     nextStates[target.id.toString()] = newest.isUp
                 }
                 certificateNotice(target, now, nextCertAlerts)
@@ -61,7 +63,12 @@ class AlertWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
         val key = target.id.toString()
         val bucket = if (days <= 10) now.toString().take(10) else "30"
         if (sent[key] != bucket) {
-            notify(target, "Certificate expiry", "${target.name} certificate expires in $days day(s)")
+            val incidentType = when {
+                days < 0 -> "cert_expired"
+                days <= 10 -> "cert_10_days"
+                else -> "cert_30_days"
+            }
+            notify(target, "Certificate expiry", "${target.name} certificate expires in $days day(s)", incidentType)
             sent[key] = bucket
         }
     }
@@ -72,11 +79,23 @@ class AlertWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
         check.errorMessage?.takeIf(String::isNotBlank)?.let { append(": $it") }
     }
 
-    private fun notify(target: TargetWithChecks, title: String, text: String) {
+    private fun notify(target: TargetWithChecks, title: String, text: String, incidentType: String) {
         if (android.os.Build.VERSION.SDK_INT >= 33 &&
             applicationContext.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) return
         NotificationChannels.ensure(applicationContext)
+        val markReadIntent = Intent(applicationContext, NotificationActionReceiver::class.java).apply {
+            action = NotificationActionReceiver.ACTION_MARK_READ
+            putExtra(NotificationActionReceiver.EXTRA_TARGET_ID, target.id)
+            putExtra(NotificationActionReceiver.EXTRA_INCIDENT_TYPE, incidentType)
+            putExtra(NotificationActionReceiver.EXTRA_NOTIFICATION_ID, target.id.toInt())
+        }
+        val markReadPendingIntent = android.app.PendingIntent.getBroadcast(
+            applicationContext,
+            target.id.toInt(),
+            markReadIntent,
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
+        )
         val notification = NotificationCompat.Builder(applicationContext, NotificationChannels.ALERTS)
             .setSmallIcon(R.drawable.notification_icon)
             .setContentTitle(title)
@@ -86,9 +105,17 @@ class AlertWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
                     addNextIntentWithParentStack(Intent(applicationContext, MainActivity::class.java).apply {
                         action = MainActivity.ACTION_OPEN_INCIDENTS
                         putExtra(MainActivity.EXTRA_NOTIFICATION_TARGET_ID, target.id)
+                        putExtra(MainActivity.EXTRA_NOTIFICATION_INCIDENT_TYPE, incidentType)
                     })
                     getPendingIntent(target.id.toInt(), android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE)
                 },
+            )
+            .addAction(
+                NotificationCompat.Action.Builder(
+                    R.drawable.notification_icon,
+                    "Mark as read",
+                    markReadPendingIntent,
+                ).build(),
             )
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
