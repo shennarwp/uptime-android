@@ -471,7 +471,7 @@ private fun TabletDashboard(
                 selectedTarget?.let { target ->
                     item(key = target.id) { TargetCard(target, onEdit, onDelete) }
                 }
-                item { DashboardFooter(targets.size, lastSyncAt) }
+                DashboardFooter(targets.size, lastSyncAt)
             }
         }
     }
