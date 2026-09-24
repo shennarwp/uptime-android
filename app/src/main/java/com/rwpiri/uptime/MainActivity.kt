@@ -96,6 +96,8 @@ import com.rwpiri.uptime.data.Check
 import com.rwpiri.uptime.data.TargetDraft
 import com.rwpiri.uptime.data.TargetWithChecks
 import com.rwpiri.uptime.data.Incident
+import com.rwpiri.uptime.data.checksNewestFirst
+import com.rwpiri.uptime.data.latestCheck
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
@@ -446,7 +448,7 @@ private fun TabletDashboard(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     items(targets, key = { it.id }) { target ->
-                        val latest = target.checks.maxByOrNull { it.checkedAt }
+                        val latest = latestCheck(target.checks)
                         Row(
                             Modifier
                                 .fillMaxWidth()
@@ -539,7 +541,7 @@ private fun TargetCard(
     highlighted: Boolean = false,
 ) {
     val cardScale by animateFloatAsState(if (highlighted) 1.02f else 1f, label = "target-highlight")
-    val latest = target.checks.maxByOrNull { it.checkedAt }
+    val latest = latestCheck(target.checks)
     val isUp = latest?.isUp
     val borderColor = when (isUp) {
         true -> Color(0xFF22C55E)
@@ -686,7 +688,7 @@ private fun certificateColor(level: CertificateLevel): Color = when (level) {
 private fun HistoryBar(checks: List<Check>) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val slots = maxOf(1, (maxWidth / 8.dp).toInt())
-        val chronological = checks.sortedByDescending { it.checkedAt }.take(slots).reversed()
+        val chronological = checksNewestFirst(checks).take(slots).reversed()
         Row(Modifier.fillMaxWidth().height(18.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             repeat(slots - chronological.size) {
                 Box(

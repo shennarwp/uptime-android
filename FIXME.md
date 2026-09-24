@@ -4,11 +4,6 @@ This is the Android client backlog. Items describe work that belongs in this app
 
 ## Before first real use
 
-- [ ] Confirm the deployed API paths use `/api/v1` and that the server accepts a bearer token on every mutating endpoint.
-- [ ] Confirm the deployed server matches the repository's six-field cron contract (seconds first) and descriptors such as `@hourly`.
-- [ ] Confirm `checked_at` is RFC3339 and that checks are sorted by timestamp before rendering and worker evaluation.
-- [ ] Confirm `cert_expires_at` is RFC3339 UTC and is absent for plain HTTP targets.
-- [ ] Test the deployed reverse proxy with the Android client's HTTPS origin and clear error responses.
 - [ ] Set the app's battery mode to Unrestricted on the personal device and document the device-specific steps.
 
 ## High priority app work
