@@ -48,3 +48,16 @@ data class TargetDraft(
     val url: String = "",
     val schedule: String = "0 */5 * * * *",
 )
+
+@Serializable
+data class Incident(
+    val id: Long,
+    @SerialName("target_id") val targetId: Long,
+    @SerialName("target_name") val targetName: String,
+    @SerialName("target_url") val targetUrl: String,
+    val type: String,
+    val cause: String? = null,
+    val timestamp: String,
+    @SerialName("is_read") val isRead: Boolean = false,
+    val resolved: Boolean = false,
+)

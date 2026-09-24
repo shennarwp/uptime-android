@@ -4,9 +4,11 @@ import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.app.TaskStackBuilder
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.rwpiri.uptime.data.Check
@@ -76,9 +78,17 @@ class AlertWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
         ) return
         NotificationChannels.ensure(applicationContext)
         val notification = NotificationCompat.Builder(applicationContext, NotificationChannels.ALERTS)
-            .setSmallIcon(com.rwpiri.uptime.R.drawable.ic_launcher_foreground)
+            .setSmallIcon(com.rwpiri.uptime.R.drawable.notification_icon)
             .setContentTitle(title)
             .setContentText(text)
+            .setContentIntent(
+                TaskStackBuilder.create(applicationContext).run {
+                    addNextIntentWithParentStack(Intent(applicationContext, MainActivity::class.java).apply {
+                        action = MainActivity.ACTION_OPEN_INCIDENTS
+                    })
+                    getPendingIntent(target.id.toInt(), android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE)
+                },
+            )
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()

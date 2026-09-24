@@ -11,6 +11,7 @@ import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
+import retrofit2.http.PATCH
 import retrofit2.http.PUT
 import retrofit2.http.Path
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
@@ -42,6 +43,18 @@ interface UptimeApi {
         @Header("Authorization") authorization: String,
         @Path("id") id: Long,
     )
+
+    @GET("incidents")
+    suspend fun getIncidents(@Header("Authorization") authorization: String): List<Incident>
+
+    @PATCH("incident/{id}/read")
+    suspend fun markIncidentRead(
+        @Header("Authorization") authorization: String,
+        @Path("id") id: Long,
+    )
+
+    @POST("incidents/read")
+    suspend fun markAllIncidentsRead(@Header("Authorization") authorization: String)
 }
 
 object UptimeApiFactory {
