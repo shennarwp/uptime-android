@@ -1,0 +1,52 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":rebaseStalePrs",
+    ":timezone(Europe/Berlin)",
+    "helpers:pinGitHubActionDigests",
+    ":semanticCommits",
+    ":semanticCommitType(chore)",
+    ":semanticCommitScope(deps)",
+    ":dependencyDashboard",
+    "group:recommended"
+  ],
+  "baseBranchPatterns": ["master"],
+  "rebaseWhen": "conflicted",
+  "addLabels": ["dependencies", "renovate"],
+  "rangeStrategy": "bump",
+  "separateMajorMinor": true,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": true
+  },
+  "vulnerabilityAlerts": {
+    "semanticCommitType": "fix",
+    "semanticCommitScope": "security",
+    "labels": ["security"]
+  },
+  "packageRules": [
+    {
+      "description": "Group major updates together for review",
+      "matchUpdateTypes": ["major"],
+      "groupName": "major",
+      "addLabels": ["major", "version-update"]
+    },
+    {
+      "description": "Group minor and patch Gradle dependency updates",
+      "matchManagers": ["gradle", "gradle-wrapper"],
+      "matchUpdateTypes": ["minor", "patch", "pin"],
+      "groupName": "gradle dependencies"
+    },
+    {
+      "description": "Automerge compatible GitHub Actions updates after CI passes",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "automerge": true,
+      "groupName": "github actions"
+    }
+  ],
+  "platform": "github",
+  "onboarding": false,
+  "requireConfig": "ignored"
+}
