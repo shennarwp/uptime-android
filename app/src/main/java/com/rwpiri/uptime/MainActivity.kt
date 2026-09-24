@@ -29,8 +29,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -66,6 +69,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -97,10 +101,14 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 class MainActivity : ComponentActivity() {
     private val openIncidents = mutableStateOf(false)
     private val notificationTargetId = mutableStateOf<Long?>(null)
+    private val notificationIncidentType = mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -115,9 +123,11 @@ class MainActivity : ComponentActivity() {
                 UptimeScreen(
                     openIncidents = openIncidents.value,
                     notificationTargetId = notificationTargetId.value,
+                    notificationIncidentType = notificationIncidentType.value,
                     onIncidentsOpened = {
                         openIncidents.value = false
                         notificationTargetId.value = null
+                        notificationIncidentType.value = null
                     },
                 )
             }
@@ -134,6 +144,7 @@ class MainActivity : ComponentActivity() {
             openIncidents.value = true
             notificationTargetId.value = intent.getLongExtra(EXTRA_NOTIFICATION_TARGET_ID, -1L)
                 .takeIf { it >= 0L }
+            notificationIncidentType.value = intent.getStringExtra(EXTRA_NOTIFICATION_INCIDENT_TYPE)
         }
     }
 
@@ -151,6 +162,7 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val ACTION_OPEN_INCIDENTS = "com.rwpiri.uptime.OPEN_INCIDENTS"
         const val EXTRA_NOTIFICATION_TARGET_ID = "com.rwpiri.uptime.NOTIFICATION_TARGET_ID"
+        const val EXTRA_NOTIFICATION_INCIDENT_TYPE = "com.rwpiri.uptime.NOTIFICATION_INCIDENT_TYPE"
     }
 }
 
@@ -188,6 +200,7 @@ private fun UptimeTheme(content: @Composable () -> Unit) {
 private fun UptimeScreen(
     openIncidents: Boolean,
     notificationTargetId: Long?,
+    notificationIncidentType: String?,
     onIncidentsOpened: () -> Unit,
 ) {
     val application = androidx.compose.ui.platform.LocalContext.current.applicationContext as UptimeApplication
@@ -202,7 +215,7 @@ private fun UptimeScreen(
     LaunchedEffect(openIncidents, notificationTargetId) {
         if (openIncidents) {
             showIncidentView = true
-            model.refreshIncidents(notificationTargetId)
+            model.refreshIncidents(notificationTargetId, notificationIncidentType)
             onIncidentsOpened()
         }
     }
@@ -413,15 +426,18 @@ private fun TabletDashboard(
     onRefresh: () -> Unit,
 ) {
     var selectedId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var highlightedId by remember { mutableStateOf<Long?>(null) }
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
     LaunchedEffect(targets) {
         if (targets.none { it.id == selectedId }) selectedId = targets.firstOrNull()?.id
     }
-    val selectedTarget = targets.firstOrNull { it.id == selectedId }
-
     Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         Card(
             modifier = Modifier.width(220.dp).fillMaxSize(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isSystemInDarkTheme()) Color(0xFF181818) else Color(0xFFF9F9F9),
+            ),
         ) {
             Column(Modifier.padding(12.dp)) {
                 Text("Targets", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -436,10 +452,20 @@ private fun TabletDashboard(
                                 .fillMaxWidth()
                                 .clip(MaterialTheme.shapes.small)
                                 .background(
-                                    if (target.id == selectedId) MaterialTheme.colorScheme.secondaryContainer
-                                    else Color.Transparent,
+                                    if (target.id == selectedId) {
+                                        if (isSystemInDarkTheme()) Color(0xFF2C2C2C) else Color(0xFFEAEAEA)
+                                    } else Color.Transparent,
                                 )
-                                .clickable { selectedId = target.id }
+                                .clickable {
+                                    selectedId = target.id
+                                    highlightedId = target.id
+                                    scope.launch {
+                                        val index = targets.indexOfFirst { it.id == target.id }
+                                        if (index >= 0) listState.animateScrollToItem(index)
+                                        delay(500.milliseconds)
+                                        if (highlightedId == target.id) highlightedId = null
+                                    }
+                                }
                                 .padding(horizontal = 10.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -464,12 +490,18 @@ private fun TabletDashboard(
             modifier = Modifier.weight(1f),
         ) {
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(top = 8.dp, bottom = 32.dp),
             ) {
-                selectedTarget?.let { target ->
-                    item(key = target.id) { TargetCard(target, onEdit, onDelete) }
+                items(targets, key = { it.id }) { target ->
+                    TargetCard(
+                        target = target,
+                        onEdit = onEdit,
+                        onDelete = onDelete,
+                        highlighted = highlightedId == target.id,
+                    )
                 }
                 DashboardFooter(targets.size, lastSyncAt)
             }
@@ -494,7 +526,13 @@ private fun androidx.compose.foundation.lazy.LazyListScope.DashboardFooter(
 }
 
 @Composable
-private fun TargetCard(target: TargetWithChecks, onEdit: (TargetWithChecks) -> Unit, onDelete: (TargetWithChecks) -> Unit) {
+private fun TargetCard(
+    target: TargetWithChecks,
+    onEdit: (TargetWithChecks) -> Unit,
+    onDelete: (TargetWithChecks) -> Unit,
+    highlighted: Boolean = false,
+) {
+    val cardScale by animateFloatAsState(if (highlighted) 1.02f else 1f, label = "target-highlight")
     val latest = target.checks.maxByOrNull { it.checkedAt }
     val isUp = latest?.isUp
     val borderColor = when (isUp) {
@@ -505,7 +543,11 @@ private fun TargetCard(target: TargetWithChecks, onEdit: (TargetWithChecks) -> U
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(1.dp, MaterialTheme.shapes.medium),
+            .graphicsLayer {
+                scaleX = cardScale
+                scaleY = cardScale
+            }
+            .shadow(if (highlighted) 8.dp else 1.dp, MaterialTheme.shapes.medium),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(if (isUp == null) 1.dp else 2.dp, borderColor),
         shape = MaterialTheme.shapes.medium,
@@ -636,26 +678,28 @@ private fun certificateColor(level: CertificateLevel): Color = when (level) {
 
 @Composable
 private fun HistoryBar(checks: List<Check>) {
-    val slots = 40
-    val chronological = checks.sortedByDescending { it.checkedAt }.take(slots).reversed()
-    Row(Modifier.fillMaxWidth().height(18.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-        repeat(slots - chronological.size) {
-            Box(
-                Modifier
-                    .weight(1f)
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(if (isSystemInDarkTheme()) Color(0xFF2A2A2A) else Color(0xFFE5E7EB)),
-            )
-        }
-        chronological.forEach { check ->
-            Box(
-                Modifier
-                    .weight(1f)
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(if (check.isUp) Color(0xFF22C55E) else Color(0xFFEF4444)),
-            )
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val slots = maxOf(1, (maxWidth / 8.dp).toInt())
+        val chronological = checks.sortedByDescending { it.checkedAt }.take(slots).reversed()
+        Row(Modifier.fillMaxWidth().height(18.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            repeat(slots - chronological.size) {
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(if (isSystemInDarkTheme()) Color(0xFF2A2A2A) else Color(0xFFE5E7EB)),
+                )
+            }
+            chronological.forEach { check ->
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(if (check.isUp) Color(0xFF22C55E) else Color(0xFFEF4444)),
+                )
+            }
         }
     }
 }

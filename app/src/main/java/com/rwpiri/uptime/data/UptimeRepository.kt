@@ -31,6 +31,9 @@ class UptimeRepository(
     suspend fun delete(id: Long) = authenticated { api().deleteTarget(bearer(requireToken()), id) }
 
     suspend fun incidents(): List<Incident> = authenticated { api().getIncidents(bearer(requireToken())) }
+    suspend fun latestIncident(targetId: Long, type: String): Incident = authenticated {
+        api().getLatestIncident(bearer(requireToken()), targetId, type)
+    }
     suspend fun markIncidentRead(id: Long) = authenticated { api().markIncidentRead(bearer(requireToken()), id) }
     suspend fun markAllIncidentsRead() = authenticated { api().markAllIncidentsRead(bearer(requireToken())) }
 
