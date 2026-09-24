@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.rwpiri.uptime.data.TargetDraft
 import com.rwpiri.uptime.data.TargetWithChecks
+import com.rwpiri.uptime.data.Incident
 import com.rwpiri.uptime.data.UptimeRepository
 import com.rwpiri.uptime.data.AuthenticationExpiredException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +23,7 @@ data class UptimeUiState(
     val lastSyncAt: String? = null,
     val requiresLogin: Boolean = false,
     val refreshing: Boolean = false,
+    val incidents: List<Incident> = emptyList(),
 )
 
 class UptimeViewModel(private val repository: UptimeRepository) : ViewModel() {
@@ -38,7 +40,7 @@ class UptimeViewModel(private val repository: UptimeRepository) : ViewModel() {
             val url = repository.serverUrl()
             val loggedIn = repository.getToken() != null
             if (url.isBlank()) UptimeUiState(loading = false, serverUrl = url, loggedIn = loggedIn)
-            else UptimeUiState(false, repository.targets(), url, loggedIn, lastSyncAt = Instant.now().toString())
+            else UptimeUiState(false, repository.targets(), url, loggedIn, lastSyncAt = Instant.now().toString(), incidents = if (loggedIn) repository.incidents() else emptyList())
         }.onSuccess { _state.value = it.copy(refreshing = false) }
             .onFailure { _state.value = _state.value.copy(loading = false, refreshing = false, error = it.message ?: "Request failed") }
     }
@@ -55,6 +57,26 @@ class UptimeViewModel(private val repository: UptimeRepository) : ViewModel() {
     }
 
     fun logout() = viewModelScope.launch { repository.clearToken(); refresh() }
+
+    fun refreshIncidents() = viewModelScope.launch {
+        runCatching { repository.incidents() }.onSuccess { incidents ->
+            _state.value = _state.value.copy(incidents = incidents)
+        }.onFailure { error -> handleMutationError(error, "Unable to load incidents") }
+    }
+
+    fun markIncidentRead(id: Long) = viewModelScope.launch {
+        runCatching { repository.markIncidentRead(id) }.onSuccess {
+            _state.value = _state.value.copy(incidents = _state.value.incidents.map { incident ->
+                if (incident.id == id) incident.copy(isRead = true) else incident
+            })
+        }.onFailure { error -> handleMutationError(error, "Unable to mark incident read") }
+    }
+
+    fun markAllIncidentsRead() = viewModelScope.launch {
+        runCatching { repository.markAllIncidentsRead() }.onSuccess {
+            _state.value = _state.value.copy(incidents = _state.value.incidents.map { it.copy(isRead = true) })
+        }.onFailure { error -> handleMutationError(error, "Unable to mark incidents read") }
+    }
 
     fun create(draft: TargetDraft) = mutate { repository.create(draft) }
     fun update(id: Long, draft: TargetDraft) = mutate { repository.update(id, draft) }

@@ -29,8 +29,6 @@ This is the Android client backlog. Items describe work that belongs in this app
 
 ## Deliberately deferred
 
-- [ ] Add an incident view for recent monitoring events once the backend exposes incident data.
-- [ ] Open the app’s incident view when the user taps a monitoring notification.
 - [ ] On-device monitoring, FCM, ntfy, Firebase, Play Store release, and multi-account support.
 
 ## Backend context to keep visible
@@ -46,7 +44,5 @@ This is the Android client backlog. Items describe work that belongs in this app
 - [ ] Keep app documentation current as setup, behavior, and release steps change.
 - [ ] Expand automated test coverage for dashboard behavior, notification navigation, and view-model logic.
 - [ ] Resolve remaining Android Studio/IDE warnings where practical.
-- [ ] Ensure status-bar icons and text use a dark, readable appearance in light mode; verify the app controls the system-bar icon appearance.
-- [ ] Render check history across the full target-card width; fill missing checks with gray placeholders and place the newest check on the right, matching the uptime web app.
 - [ ] Add Lefthook-managed local checks. Lefthook does not require `package.json`; use its native binary installer and configure Gradle tasks directly.
 - [ ] Add GitHub workflows for Renovate, test/build validation, and APK builds on version tags. Deferred for later.

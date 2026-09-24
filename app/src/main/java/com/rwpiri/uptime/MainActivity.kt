@@ -4,11 +4,15 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.content.Intent
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.layout.Arrangement
@@ -25,7 +29,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -50,10 +53,12 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Login
 import androidx.compose.material.icons.automirrored.outlined.Logout
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
@@ -71,14 +76,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.rwpiri.uptime.data.Check
 import com.rwpiri.uptime.data.TargetDraft
 import com.rwpiri.uptime.data.TargetWithChecks
+import com.rwpiri.uptime.data.Incident
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
@@ -86,14 +97,47 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
+    private val openIncidents = androidx.compose.runtime.mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handleIntent(intent)
+        updateSystemBars()
         NotificationChannels.ensure(this)
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 100)
         }
-        setContent { UptimeTheme { UptimeScreen() } }
+        setContent {
+            UptimeTheme {
+                UptimeScreen(
+                    openIncidents = openIncidents.value,
+                    onIncidentsOpened = { openIncidents.value = false },
+                )
+            }
+        }
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent) {
+        if (intent.action == ACTION_OPEN_INCIDENTS) openIncidents.value = true
+    }
+
+    private fun updateSystemBars() {
+        val dark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        WindowCompat.setDecorFitsSystemWindows(window, true)
+        window.statusBarColor = if (dark) android.graphics.Color.rgb(24, 24, 24) else android.graphics.Color.WHITE
+        window.navigationBarColor = if (dark) android.graphics.Color.rgb(18, 18, 18) else android.graphics.Color.WHITE
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !dark
+            isAppearanceLightNavigationBars = !dark
+        }
+    }
+
+    companion object { const val ACTION_OPEN_INCIDENTS = "com.rwpiri.uptime.OPEN_INCIDENTS" }
 }
 
 @Composable
@@ -127,7 +171,7 @@ private fun UptimeTheme(content: @Composable () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun UptimeScreen() {
+private fun UptimeScreen(openIncidents: Boolean, onIncidentsOpened: () -> Unit) {
     val application = androidx.compose.ui.platform.LocalContext.current.applicationContext as UptimeApplication
     val model: UptimeViewModel = viewModel(factory = UptimeViewModelFactory(application.container.repository))
     val state by model.state.collectAsStateWithLifecycle()
@@ -136,6 +180,15 @@ private fun UptimeScreen() {
     var editing by remember { mutableStateOf<TargetWithChecks?>(null) }
     var creating by rememberSaveable { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<TargetWithChecks?>(null) }
+    var showIncidentView by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(openIncidents) {
+        if (openIncidents) {
+            showIncidentView = true
+            model.refreshIncidents()
+            onIncidentsOpened()
+        }
+    }
+    BackHandler(enabled = showIncidentView) { showIncidentView = false }
     LaunchedEffect(state.requiresLogin) { if (state.requiresLogin) showLogin = true }
     LaunchedEffect(state.loggedIn) { if (state.loggedIn) showLogin = false }
     val headerDividerColor = MaterialTheme.colorScheme.outline
@@ -162,7 +215,10 @@ private fun UptimeScreen() {
                     actionIconContentColor = MaterialTheme.colorScheme.onSurface,
                 ),
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.clickable { showIncidentView = false },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         Image(
                             painter = painterResource(R.drawable.uptime_logo),
                             contentDescription = null,
@@ -174,25 +230,55 @@ private fun UptimeScreen() {
                 actions = {
                     HeaderIconButton(Icons.Outlined.Refresh, "Refresh", model::refresh)
                     HeaderIconButton(Icons.Outlined.Settings, "Settings") { showSettings = true }
+                    if (state.loggedIn) {
+                        HeaderIconButtonWithBadge(
+                            icon = Icons.Outlined.Notifications,
+                            description = "View incidents",
+                            unread = state.incidents.count { !it.isRead },
+                            onClick = { showIncidentView = true; model.refreshIncidents() },
+                        )
+                    }
                     HeaderIconButton(
                         if (state.loggedIn) Icons.AutoMirrored.Outlined.Logout else Icons.AutoMirrored.Outlined.Login,
                         if (state.loggedIn) "Logout" else "Login",
-                    ) { if (state.loggedIn) model.logout() else showLogin = true }
+                    ) {
+                        if (state.loggedIn) {
+                            showIncidentView = false
+                            model.logout()
+                        } else {
+                            showLogin = true
+                        }
+                    }
                 },
             )
         },
         floatingActionButton = {
             if (state.loggedIn) FloatingActionButton(
-                onClick = { creating = true },
+                onClick = if (showIncidentView) {
+                    { model.markAllIncidentsRead() }
+                } else {
+                    { creating = true }
+                },
                 containerColor = Color(0xFF22C55E),
                 contentColor = Color.White,
-            ) { Text("+") }
+            ) {
+                if (showIncidentView) {
+                    Icon(Icons.Outlined.DoneAll, contentDescription = "Mark all incidents as read")
+                } else {
+                    Text("+", fontSize = 28.sp)
+                }
+            }
         },
     ) { padding ->
         when {
             state.loading -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             state.serverUrl.isBlank() -> EmptyState("Set the server URL in Settings to connect.", Modifier.padding(padding))
-            else -> Dashboard(
+            else -> if (showIncidentView) IncidentView(
+                incidents = state.incidents,
+                modifier = Modifier.padding(padding),
+                onBack = { showIncidentView = false },
+                onMarkRead = model::markIncidentRead,
+            ) else Dashboard(
                 targets = state.targets,
                 error = state.error,
                 lastSyncAt = state.lastSyncAt,
@@ -205,7 +291,7 @@ private fun UptimeScreen() {
         }
     }
 
-    if (showLogin) LoginDialog(onDismiss = { showLogin = false }, onLogin = model::login, error = state.error)
+    if (showLogin) LoginSheet(onDismiss = { showLogin = false }, onLogin = model::login, error = state.error)
     if (showSettings) SettingsSheet(
         initialUrl = state.serverUrl,
         onDismiss = { showSettings = false },
@@ -235,6 +321,27 @@ private fun HeaderIconButton(icon: ImageVector, description: String, onClick: ()
 }
 
 @Composable
+private fun HeaderIconButtonWithBadge(
+    icon: ImageVector,
+    description: String,
+    unread: Int,
+    onClick: () -> Unit,
+) {
+    Box {
+        HeaderIconButton(icon, description, onClick)
+        if (unread > 0) {
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 7.dp, end = 7.dp)
+                    .size(7.dp)
+                    .background(Color(0xFFEF4444), RoundedCornerShape(50)),
+            )
+        }
+    }
+}
+
+@Composable
 @OptIn(ExperimentalMaterial3Api::class)
 private fun Dashboard(
     targets: List<TargetWithChecks>,
@@ -256,7 +363,7 @@ private fun Dashboard(
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
+                contentPadding = PaddingValues(top = 8.dp, bottom = 88.dp),
             ) {
                 items(targets, key = { it.id }) { target -> TargetCard(target, onEdit, onDelete) }
                 item {
@@ -322,10 +429,18 @@ private fun TargetCard(target: TargetWithChecks, onEdit: (TargetWithChecks) -> U
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 IconButton(onClick = { onEdit(target) }, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Outlined.Edit, contentDescription = "Edit ${target.name}", tint = MaterialTheme.colorScheme.onSurface)
+                    Icon(
+                        painterResource(R.drawable.edit_icon),
+                        contentDescription = "Edit ${target.name}",
+                        tint = Color.Unspecified,
+                    )
                 }
                 IconButton(onClick = { onDelete(target) }, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Outlined.Delete, contentDescription = "Delete ${target.name}", tint = MaterialTheme.colorScheme.onSurface)
+                    Icon(
+                        painterResource(R.drawable.delete_icon),
+                        contentDescription = "Delete ${target.name}",
+                        tint = Color.Unspecified,
+                    )
                 }
             }
         }
@@ -411,8 +526,19 @@ private fun certificateColor(level: CertificateLevel): Color = when (level) {
 
 @Composable
 private fun HistoryBar(checks: List<Check>) {
+    val slots = 40
+    val chronological = checks.sortedByDescending { it.checkedAt }.take(slots).reversed()
     Row(Modifier.fillMaxWidth().height(18.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-        checks.sortedBy { it.checkedAt }.takeLast(60).forEach { check ->
+        repeat(slots - chronological.size) {
+            Box(
+                Modifier
+                    .weight(1f)
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+            )
+        }
+        chronological.forEach { check ->
             Box(
                 Modifier
                     .weight(1f)
@@ -420,6 +546,94 @@ private fun HistoryBar(checks: List<Check>) {
                     .clip(RoundedCornerShape(2.dp))
                     .background(if (check.isUp) Color(0xFF22C55E) else Color(0xFFEF4444)),
             )
+        }
+    }
+}
+
+private val incidentLabels = mapOf(
+    "going_down" to "Target went down",
+    "going_up" to "Target is back up",
+    "cert_30_days" to "Certificate has 30 days left",
+    "cert_10_days" to "Certificate has 10 days left",
+    "cert_expired" to "Certificate expired",
+    "dns_error" to "DNS lookup failed",
+    "timeout_error" to "Target check timed out",
+    "connection_refused" to "Connection refused",
+    "tls_error" to "TLS connection failed",
+    "network_error" to "Network error",
+)
+
+@Composable
+private fun IncidentView(
+    incidents: List<Incident>,
+    modifier: Modifier,
+    onBack: () -> Unit,
+    onMarkRead: (Long) -> Unit,
+) {
+    val incidentBorder = MaterialTheme.colorScheme.outline
+    Column(modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+        Row(
+            Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back to targets")
+            }
+            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                Text("Incidents", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.size(48.dp))
+        }
+        if (incidents.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No incidents yet.") }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(bottom = 16.dp),
+            ) {
+                items(incidents, key = { it.id }) { incident ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .drawBehind {
+                                drawLine(
+                                    color = incidentBorder,
+                                    start = Offset(0f, size.height),
+                                    end = Offset(size.width, size.height),
+                                    strokeWidth = 1.dp.toPx(),
+                                )
+                                if (!incident.isRead) {
+                                    drawLine(
+                                        color = Color(0xFFDC2626),
+                                        start = Offset(0f, 0f),
+                                        end = Offset(0f, size.height),
+                                        strokeWidth = 3.dp.toPx(),
+                                    )
+                                }
+                            }
+                            .padding(horizontal = 12.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(incidentLabels[incident.type] ?: incident.type, fontWeight = FontWeight.Bold)
+                                Text(incident.targetName, color = Color.Black)
+                                Text(formatDateTime(incident.timestamp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                incident.cause?.takeIf(String::isNotBlank)?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                            }
+                        if (!incident.isRead) {
+                            IconButton(onClick = { onMarkRead(incident.id) }) {
+                                Icon(
+                                    Icons.Outlined.Check,
+                                    contentDescription = "Mark incident as read",
+                                    tint = Color.Black,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -457,28 +671,53 @@ private fun StatusBadge(isUp: Boolean?) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LoginDialog(onDismiss: () -> Unit, onLogin: (String) -> Unit, error: String?) {
+private fun LoginSheet(onDismiss: () -> Unit, onLogin: (String) -> Unit, error: String?) {
     var token by rememberSaveable { mutableStateOf("") }
-    AlertDialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text("Login") },
-        text = {
-            Column {
-                OutlinedTextField(token, { token = it }, label = { Text("API token") }, singleLine = true)
-                error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp)) }
-            }
-        },
-        confirmButton = { TextButton(enabled = token.isNotBlank(), onClick = { onLogin(token) }) { Text("Verify") } },
-        dismissButton = {
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+    ) {
+        Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Login", style = MaterialTheme.typography.headlineSmall)
+            OutlinedTextField(
+                value = token,
+                onValueChange = { token = it },
+                label = { Text("API token") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                visualTransformation = PasswordVisualTransformation(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF22C55E),
+                    focusedLabelColor = Color(0xFF22C55E),
+                    cursorColor = Color(0xFF22C55E),
+                ),
+            )
+            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            Button(
+                enabled = token.isNotBlank(),
+                onClick = { onLogin(token) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF22C55E),
+                    contentColor = Color.White,
+                ),
+            ) { Text("Verify") }
             TextButton(
                 onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
                 colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
             ) { Text("Cancel") }
-        },
-    )
+            Spacer(Modifier.height(24.dp))
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
