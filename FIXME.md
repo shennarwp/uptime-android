@@ -45,4 +45,3 @@ This is the Android client backlog. Items describe work that belongs in this app
 - [ ] Expand automated test coverage for dashboard behavior, notification navigation, and view-model logic.
 - [ ] Resolve remaining Android Studio/IDE warnings where practical.
 - [ ] Add Lefthook-managed local checks. Lefthook does not require `package.json`; use its native binary installer and configure Gradle tasks directly.
-- [ ] Add GitHub workflows for Renovate, test/build validation, and APK builds on version tags. Deferred for later.

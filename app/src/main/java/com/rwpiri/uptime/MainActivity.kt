@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -98,6 +100,7 @@ import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     private val openIncidents = mutableStateOf(false)
+    private val notificationTargetId = mutableStateOf<Long?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -111,7 +114,11 @@ class MainActivity : ComponentActivity() {
             UptimeTheme {
                 UptimeScreen(
                     openIncidents = openIncidents.value,
-                    onIncidentsOpened = { openIncidents.value = false },
+                    notificationTargetId = notificationTargetId.value,
+                    onIncidentsOpened = {
+                        openIncidents.value = false
+                        notificationTargetId.value = null
+                    },
                 )
             }
         }
@@ -123,7 +130,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleIntent(intent: Intent) {
-        if (intent.action == ACTION_OPEN_INCIDENTS) openIncidents.value = true
+        if (intent.action == ACTION_OPEN_INCIDENTS) {
+            openIncidents.value = true
+            notificationTargetId.value = intent.getLongExtra(EXTRA_NOTIFICATION_TARGET_ID, -1L)
+                .takeIf { it >= 0L }
+        }
     }
 
     private fun updateSystemBars() {
@@ -137,7 +148,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    companion object { const val ACTION_OPEN_INCIDENTS = "com.rwpiri.uptime.OPEN_INCIDENTS" }
+    companion object {
+        const val ACTION_OPEN_INCIDENTS = "com.rwpiri.uptime.OPEN_INCIDENTS"
+        const val EXTRA_NOTIFICATION_TARGET_ID = "com.rwpiri.uptime.NOTIFICATION_TARGET_ID"
+    }
 }
 
 @Composable
@@ -171,7 +185,11 @@ private fun UptimeTheme(content: @Composable () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun UptimeScreen(openIncidents: Boolean, onIncidentsOpened: () -> Unit) {
+private fun UptimeScreen(
+    openIncidents: Boolean,
+    notificationTargetId: Long?,
+    onIncidentsOpened: () -> Unit,
+) {
     val application = androidx.compose.ui.platform.LocalContext.current.applicationContext as UptimeApplication
     val model: UptimeViewModel = viewModel(factory = UptimeViewModelFactory(application.container.repository))
     val state by model.state.collectAsStateWithLifecycle()
@@ -181,10 +199,10 @@ private fun UptimeScreen(openIncidents: Boolean, onIncidentsOpened: () -> Unit) 
     var creating by rememberSaveable { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<TargetWithChecks?>(null) }
     var showIncidentView by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(openIncidents) {
+    LaunchedEffect(openIncidents, notificationTargetId) {
         if (openIncidents) {
             showIncidentView = true
-            model.refreshIncidents()
+            model.refreshIncidents(notificationTargetId)
             onIncidentsOpened()
         }
     }
@@ -355,6 +373,91 @@ private fun Dashboard(
 ) {
     Column(modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(vertical = 8.dp)) }
+        BoxWithConstraints(Modifier.weight(1f)) {
+            if (maxWidth >= 600.dp) {
+                TabletDashboard(
+                    targets = targets,
+                    lastSyncAt = lastSyncAt,
+                    refreshing = refreshing,
+                    onEdit = onEdit,
+                    onDelete = onDelete,
+                    onRefresh = onRefresh,
+                )
+            } else {
+                PullToRefreshBox(
+                    isRefreshing = refreshing,
+                    onRefresh = onRefresh,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(top = 8.dp, bottom = 88.dp),
+                    ) {
+                        items(targets, key = { it.id }) { target -> TargetCard(target, onEdit, onDelete) }
+                        DashboardFooter(targets.size, lastSyncAt)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TabletDashboard(
+    targets: List<TargetWithChecks>,
+    lastSyncAt: String?,
+    refreshing: Boolean,
+    onEdit: (TargetWithChecks) -> Unit,
+    onDelete: (TargetWithChecks) -> Unit,
+    onRefresh: () -> Unit,
+) {
+    var selectedId by rememberSaveable { mutableStateOf<Long?>(null) }
+    LaunchedEffect(targets) {
+        if (targets.none { it.id == selectedId }) selectedId = targets.firstOrNull()?.id
+    }
+    val selectedTarget = targets.firstOrNull { it.id == selectedId }
+
+    Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Card(
+            modifier = Modifier.width(220.dp).fillMaxSize(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        ) {
+            Column(Modifier.padding(12.dp)) {
+                Text("Targets", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(top = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    items(targets, key = { it.id }) { target ->
+                        val latest = target.checks.maxByOrNull { it.checkedAt }
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(MaterialTheme.shapes.small)
+                                .background(
+                                    if (target.id == selectedId) MaterialTheme.colorScheme.secondaryContainer
+                                    else Color.Transparent,
+                                )
+                                .clickable { selectedId = target.id }
+                                .padding(horizontal = 10.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                target.name,
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                fontWeight = if (target.id == selectedId) FontWeight.Bold else FontWeight.Normal,
+                            )
+                            Spacer(Modifier.size(8.dp))
+                            StatusBadge(latest?.isUp)
+                        }
+                    }
+                }
+            }
+        }
+
         PullToRefreshBox(
             isRefreshing = refreshing,
             onRefresh = onRefresh,
@@ -363,22 +466,29 @@ private fun Dashboard(
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(top = 8.dp, bottom = 88.dp),
+                contentPadding = PaddingValues(top = 8.dp, bottom = 32.dp),
             ) {
-                items(targets, key = { it.id }) { target -> TargetCard(target, onEdit, onDelete) }
-                item {
-                    Row(
-                        Modifier.fillMaxWidth().padding(top = 2.dp, end = 72.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text("${targets.size} targets", style = MaterialTheme.typography.bodySmall)
-                        lastSyncAt?.let {
-                            Text("Last sync: ${formatDateTime(it)}", style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
+                selectedTarget?.let { target ->
+                    item(key = target.id) { TargetCard(target, onEdit, onDelete) }
                 }
+                item { DashboardFooter(targets.size, lastSyncAt) }
             }
+        }
+    }
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.DashboardFooter(
+    targetCount: Int,
+    lastSyncAt: String?,
+) {
+    item {
+        Row(
+            Modifier.fillMaxWidth().padding(top = 2.dp, end = 72.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("$targetCount targets", style = MaterialTheme.typography.bodySmall)
+            lastSyncAt?.let { Text("Last sync: ${formatDateTime(it)}", style = MaterialTheme.typography.bodySmall) }
         }
     }
 }
