@@ -18,6 +18,7 @@ This is the Android client backlog. Items describe work that belongs in this app
 
 ## Medium priority app work
 
+- [ ] Add schedule presets such as hourly or daily once the backend exposes a schedule-preset API.
 - [ ] Add a target detail screen once the product needs more than the dashboard history window.
 - [ ] Add explicit certificate renewal handling so a renewed certificate resets the local reminder state immediately.
 - [ ] Add a small worker diagnostics screen showing `lastRun`, last known state per target, and the last worker failure.
@@ -29,7 +30,9 @@ This is the Android client backlog. Items describe work that belongs in this app
 
 ## Deliberately deferred
 
-- [ ] On-device monitoring, FCM, ntfy, Firebase, Play Store release, and multi-account support.
+- [ ] On-device monitoring, FCM, Firebase, Play Store release, and multi-account support.
+- [ ] Add configurable custom ntfy notifications once the backend exposes the required API.
+- [ ] Add a manual check trigger for an individual target once the backend exposes the required API.
 
 ## Backend context to keep visible
 
