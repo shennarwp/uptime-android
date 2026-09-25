@@ -8,11 +8,11 @@ pre-commit:
       run: gitleaks protect --staged --redact --verbose --exit-code 1
 
 pre-push:
-  parallel: true
+  parallel: false
   commands:
     lint:
-      run: ./gradlew lint
+      run: ./scripts/run-gradle-check.sh lint
     unit-tests:
-      run: ./gradlew testDebugUnitTest
+      run: ./scripts/run-gradle-check.sh testDebugUnitTest
     secrets:
       run: gitleaks detect --source . --redact --verbose --exit-code 1
