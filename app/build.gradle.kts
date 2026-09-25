@@ -71,6 +71,8 @@ tasks.register<JacocoReport>("jacocoDebugTestReport") {
         fileTree(layout.buildDirectory) {
             include("tmp/kotlin-classes/debug/**/*.class")
             include("intermediates/javac/debug/**/*.class")
+            include("intermediates/compile_library_classes_jar/debug/**/*.jar")
+            include("intermediates/runtime_library_classes_jar/debug/**/*.jar")
             exclude(
                 "**/R.class",
                 "**/R\$*.class",
