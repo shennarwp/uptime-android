@@ -69,7 +69,12 @@ Enable the tracked Git hooks once per checkout:
 ./scripts/install-git-hooks.sh
 ```
 
-The script uses [Lefthook](https://lefthook.dev/), a standalone native binary; no `package.json`, Node.js, or npm is required. Install Lefthook and Gitleaks in WSL, then run the script. The configured pre-commit and pre-push checks run Gitleaks, Android lint, and the JVM unit tests. Git for Windows clients such as Sublime Merge are supported: the tracked hooks automatically bridge into WSL, so commits and pushes from Windows use the same checks.
+The script uses [Lefthook](https://lefthook.dev/), a standalone native binary; no `package.json`, Node.js, or npm is required. Install both tools in WSL before running it:
+
+- [Install Lefthook](https://lefthook.dev/install/).
+- [Install Gitleaks](https://github.com/gitleaks/gitleaks#installation).
+
+Then run `./scripts/install-git-hooks.sh` once per checkout. The configured pre-commit and pre-push checks run Gitleaks, Android lint, and the JVM unit tests. Git for Windows clients such as Sublime Merge are supported: the tracked hooks automatically bridge into WSL, so commits and pushes from Windows use the same checks.
 
 ## Project layout
 
