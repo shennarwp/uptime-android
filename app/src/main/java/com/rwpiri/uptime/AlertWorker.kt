@@ -20,6 +20,7 @@ import com.rwpiri.uptime.data.parseCheckedAt
 import java.time.Duration
 import java.time.Instant
 import kotlin.math.ceil
+import androidx.core.net.toUri
 
 class AlertWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
@@ -116,7 +117,7 @@ class AlertWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
         val notificationTag = notificationTag(target.id, incidentType)
         val markReadIntent = Intent(applicationContext, NotificationActionReceiver::class.java).apply {
             action = NotificationActionReceiver.ACTION_MARK_READ
-            data = Uri.parse(notificationTag)
+            data = notificationTag.toUri()
             putExtra(NotificationActionReceiver.EXTRA_TARGET_ID, target.id)
             putExtra(NotificationActionReceiver.EXTRA_INCIDENT_TYPE, incidentType)
             incidentTimestamp?.let { putExtra(NotificationActionReceiver.EXTRA_INCIDENT_TIMESTAMP, it) }
@@ -137,7 +138,7 @@ class AlertWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
                 TaskStackBuilder.create(applicationContext).run {
                     addNextIntentWithParentStack(Intent(applicationContext, MainActivity::class.java).apply {
                         action = MainActivity.ACTION_OPEN_INCIDENTS
-                        data = Uri.parse(notificationTag)
+                        data = notificationTag.toUri()
                         putExtra(MainActivity.EXTRA_NOTIFICATION_TARGET_ID, target.id)
                         putExtra(MainActivity.EXTRA_NOTIFICATION_INCIDENT_TYPE, incidentType)
                     })
