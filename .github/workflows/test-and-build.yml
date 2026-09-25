@@ -48,9 +48,10 @@ jobs:
         run: |
           report=app/build/reports/jacoco/jacocoDebugTestReport/jacocoDebugTestReport.xml
           test -s "$report"
-          grep -q '<package ' "$report"
-          grep -q '<sourcefile ' "$report"
-          grep -q '<counter type=' "$report"
+          echo "packages=$(grep -c '<package ' "$report" || true)"
+          echo "sourcefiles=$(grep -c '<sourcefile ' "$report" || true)"
+          echo "counters=$(grep -c '<counter type=' "$report" || true)"
+          sed -n '1,12p' "$report"
 
       - name: Upload coverage to Codecov
         if: ${{ success() }}
