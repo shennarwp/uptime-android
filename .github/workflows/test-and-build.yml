@@ -48,10 +48,22 @@ jobs:
         run: |
           report=app/build/reports/jacoco/jacocoDebugTestReport/jacocoDebugTestReport.xml
           test -s "$report"
-          echo "packages=$(grep -c '<package ' "$report" || true)"
-          echo "sourcefiles=$(grep -c '<sourcefile ' "$report" || true)"
-          echo "counters=$(grep -c '<counter type=' "$report" || true)"
-          sed -n '1,12p' "$report"
+          python3 - "$report" <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+
+          report = ET.parse(sys.argv[1]).getroot()
+          packages = report.findall(".//package")
+          sourcefiles = report.findall(".//sourcefile")
+          counters = report.findall(".//counter")
+
+          print(
+              f"JaCoCo report: {len(packages)} packages, "
+              f"{len(sourcefiles)} source files, {len(counters)} counters"
+          )
+          if not packages or not sourcefiles or not counters:
+              raise SystemExit("JaCoCo report is empty or missing source coverage data")
+          PY
 
       - name: Upload coverage to Codecov
         if: ${{ success() }}
