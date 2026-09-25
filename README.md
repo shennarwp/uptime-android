@@ -15,9 +15,10 @@ Native Android client for the existing self-hosted Uptime Monitor backend. The a
 - Dashboard of targets, current status, recent history bars, and TLS certificate expiry data.
 - API-token login against `POST /api/v1/auth/verify`.
 - Add, edit, and delete targets through the existing API.
+- Incident view for reviewing and marking server incidents as read.
 - WorkManager polling about every 15 minutes with local notifications for down checks, recovery, and certificate expiry.
 - Server URL and notification/worker settings stored locally. The API token is encrypted with an Android Keystore AES-GCM key.
-- No Room, Hilt, Firebase, FCM, ntfy, React Native, PWA, offline database, Play Store packaging, or incident-history UI.
+- No Room, Hilt, Firebase, FCM, ntfy, React Native, PWA, offline database, or Play Store packaging.
 
 ## API contract
 
@@ -41,6 +42,20 @@ The Settings screen accepts either the server origin (`https://monitor.example`)
 4. Keep Android battery usage unrestricted if timely 15-minute polling matters. Android may still defer periodic work.
 
 The token is excluded from Android Auto Backup. A biometric lock is deliberately left as a follow-up because the token encryption and the app lock are separate concerns.
+
+## Notifications
+
+The app schedules `AlertWorker` with WorkManager about every 15 minutes. Each run fetches the current targets and their checks from the server, then stores the run timestamp and the last known state locally. The first successful run establishes that baseline and does not notify about older failures.
+
+On later runs, the worker looks at checks newer than the previous run and can post these local notifications:
+
+- **Down** when a new check reports that a target is unavailable. The notification includes the HTTP status or error when the server provides one.
+- **Recovered** when a target that was previously down is up again.
+- **Certificate expiry** when a certificate has 30 or fewer days remaining. Reminders are bucketed so the worker does not send the same reminder repeatedly during one period; certificates with 10 or fewer days remaining are reminded daily, and expired certificates are reported separately.
+
+Notifications use the `Uptime alerts` Android channel. Android 13 and newer require the app's notification permission; Android can also defer periodic work when battery usage is restricted, so unrestricted battery usage is recommended for timely alerts.
+
+Each notification has a target and incident-type tag, allowing down, recovery, and certificate alerts for the same target to be handled independently. Tapping a notification opens the Incident view focused on that target and incident type. The **Mark as read** action dismisses the system notification immediately, then queues a background request that marks the matching server incident as read.
 
 ## Windows and Linux development
 

@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
 
       - name: Dependency review
         if: github.event_name == 'pull_request'
@@ -39,8 +41,17 @@ jobs:
       - name: Run Android lint
         run: ./gradlew lint
 
-      - name: Run unit tests
-        run: ./gradlew testDebugUnitTest
+      - name: Run unit tests with coverage
+        run: ./gradlew testDebugUnitTest jacocoDebugTestReport
+
+      - name: Upload coverage to Codecov
+        if: ${{ success() }}
+        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5
+        with:
+          files: app/build/reports/jacoco/jacocoDebugTestReport/jacocoDebugTestReport.xml
+          flags: android-unit
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Build debug APK
         run: ./gradlew assembleDebug
