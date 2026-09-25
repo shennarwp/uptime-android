@@ -69,7 +69,7 @@ Enable the tracked Git hooks once per checkout:
 ./scripts/install-git-hooks.sh
 ```
 
-The pre-push hook requires [Gitleaks](https://github.com/gitleaks/gitleaks#installation) and scans the commits being pushed before allowing the push. If Gitleaks is installed outside `PATH`, set `GITLEAKS_BIN` to its executable path.
+The script uses [Lefthook](https://lefthook.dev/), a standalone native binary; no `package.json`, Node.js, or npm is required. Install Lefthook and Gitleaks in WSL, then run the script. The configured pre-commit and pre-push checks run Gitleaks, Android lint, and the JVM unit tests. Git for Windows clients such as Sublime Merge are supported: the tracked hooks automatically bridge into WSL, so commits and pushes from Windows use the same checks.
 
 ## Project layout
 
