@@ -1,0 +1,18 @@
+# Lefthook is a standalone native binary; package.json and Node.js are not
+# required. Install hooks with ./scripts/install-git-hooks.sh.
+
+pre-commit:
+  parallel: true
+  commands:
+    secrets:
+      run: gitleaks protect --staged --redact --verbose --exit-code 1
+
+pre-push:
+  parallel: true
+  commands:
+    lint:
+      run: ./gradlew lint
+    unit-tests:
+      run: ./gradlew testDebugUnitTest
+    secrets:
+      run: gitleaks detect --source . --redact --verbose --exit-code 1
