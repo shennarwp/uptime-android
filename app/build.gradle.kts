@@ -67,9 +67,11 @@ dependencies {
 tasks.register<JacocoReport>("jacocoDebugTestReport") {
     dependsOn("testDebugUnitTest")
 
-    val generatedClasses = layout.buildDirectory.dir("tmp/kotlin-classes/debug")
     classDirectories.setFrom(
-        fileTree(generatedClasses) {
+        fileTree(layout.buildDirectory) {
+            include("tmp/kotlin-classes/debug/**/*.class")
+            include("intermediates/**/*.class")
+            include("intermediates/**/*.jar")
             exclude(
                 "**/R.class",
                 "**/R\$*.class",
