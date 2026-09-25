@@ -6,9 +6,7 @@ import java.net.URISyntaxException
 private const val MAX_TARGET_NAME_LENGTH = 100
 
 object InputValidation {
-    fun serverUrl(raw: String): String? = if (UptimeApiFactory.normalizeBaseUrl(raw) == null) {
-        "Enter a valid http(s) server URL, such as https://monitor.example"
-    } else null
+    fun serverUrl(raw: String): String? = UptimeApiFactory.validateBaseUrl(raw)
 
     fun targetName(raw: String): String? {
         val value = raw.trim()

@@ -89,12 +89,28 @@ object UptimeApiFactory {
     }
 
     fun normalizeBaseUrl(raw: String): String? {
+        if (validateBaseUrl(raw) != null) return null
         val trimmed = raw.trim().trimEnd('/')
-        if (trimmed.isBlank()) return null
-        val uri = try { URI(trimmed) } catch (_: URISyntaxException) { return null }
-        if (uri.scheme !in setOf("http", "https") || uri.host.isNullOrBlank()) return null
-        if (uri.userInfo != null || uri.query != null || uri.fragment != null) return null
-        if (uri.path.orEmpty().isNotEmpty() && uri.path != "/api/v1") return null
+        val uri = URI(trimmed)
         return "${uri.scheme}://${uri.rawAuthority}/api/v1/"
+    }
+
+    fun validateBaseUrl(raw: String): String? {
+        val trimmed = raw.trim().trimEnd('/')
+        if (trimmed.isBlank()) return "Enter a valid http(s) server URL, such as https://monitor.example"
+        val uri = try { URI(trimmed) } catch (_: URISyntaxException) {
+            return "Enter a valid http(s) server URL, such as https://monitor.example"
+        }
+        if (uri.scheme !in setOf("http", "https") || uri.host.isNullOrBlank()) {
+            return "Enter a valid http(s) server URL, such as https://monitor.example"
+        }
+        if (uri.userInfo != null || uri.query != null || uri.fragment != null) {
+            return "Server URL must not include credentials, query parameters, or fragments"
+        }
+        val path = uri.path.orEmpty()
+        if (path.isNotEmpty() && path != "/api" && path != "/api/v1") {
+            return "Server URL path must be empty, /api, or /api/v1"
+        }
+        return null
     }
 }

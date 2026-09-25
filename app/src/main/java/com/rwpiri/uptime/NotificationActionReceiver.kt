@@ -19,12 +19,13 @@ class NotificationActionReceiver : BroadcastReceiver() {
         val targetId = intent.getLongExtra(EXTRA_TARGET_ID, -1L)
         val incidentType = intent.getStringExtra(EXTRA_INCIDENT_TYPE).orEmpty()
         val incidentTimestamp = intent.getStringExtra(EXTRA_INCIDENT_TIMESTAMP)
+        val notificationTag = intent.getStringExtra(EXTRA_NOTIFICATION_TAG).orEmpty()
         val notificationId = intent.getIntExtra(EXTRA_NOTIFICATION_ID, -1)
-        if (targetId < 0L || incidentType.isBlank() || notificationId < 0) return
+        if (targetId < 0L || incidentType.isBlank() || notificationTag.isBlank() || notificationId < 0) return
 
         // Dismiss immediately; WorkManager retries the server acknowledgement if
         // the phone is offline or the request fails transiently.
-        NotificationManagerCompat.from(context).cancel(notificationId)
+        NotificationManagerCompat.from(context).cancel(notificationTag, notificationId)
         val input = Data.Builder()
             .putLong(MarkIncidentReadWorker.KEY_TARGET_ID, targetId)
             .putString(MarkIncidentReadWorker.KEY_INCIDENT_TYPE, incidentType)
@@ -43,7 +44,9 @@ class NotificationActionReceiver : BroadcastReceiver() {
         const val EXTRA_TARGET_ID = "com.rwpiri.uptime.NOTIFICATION_TARGET_ID"
         const val EXTRA_INCIDENT_TYPE = "com.rwpiri.uptime.NOTIFICATION_INCIDENT_TYPE"
         const val EXTRA_INCIDENT_TIMESTAMP = "com.rwpiri.uptime.NOTIFICATION_INCIDENT_TIMESTAMP"
+        const val EXTRA_NOTIFICATION_TAG = "com.rwpiri.uptime.NOTIFICATION_TAG"
         const val EXTRA_NOTIFICATION_ID = "com.rwpiri.uptime.NOTIFICATION_ID"
+        const val NOTIFICATION_ID = 0
     }
 }
 
