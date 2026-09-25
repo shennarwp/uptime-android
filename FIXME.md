@@ -45,3 +45,4 @@ This is the Android client backlog. Items describe work that belongs in this app
 - [ ] Keep app documentation current as setup, behavior, and release steps change.
 - [ ] Expand automated UI coverage for dashboard behavior and notification navigation.
 - [ ] Resolve remaining Android Studio/IDE warnings where practical.
+
