@@ -13,12 +13,17 @@ class UptimeContractTest {
     @Test fun normalizesServerOriginAndVersionedPath() {
         assertEquals("https://monitor.example/api/v1/", UptimeApiFactory.normalizeBaseUrl(" https://monitor.example/ "))
         assertEquals("http://localhost:8080/api/v1/", UptimeApiFactory.normalizeBaseUrl("http://localhost:8080/api/v1"))
+        assertEquals("https://monitor.example/api/v1/", UptimeApiFactory.normalizeBaseUrl("https://monitor.example/api/"))
     }
 
     @Test fun rejectsAmbiguousServerUrls() {
         assertNull(UptimeApiFactory.normalizeBaseUrl("monitor.example"))
         assertNull(UptimeApiFactory.normalizeBaseUrl("https://monitor.example/dashboard"))
         assertNull(UptimeApiFactory.normalizeBaseUrl("https://monitor.example/api/v1?token=x"))
+        assertEquals(
+            "Server URL path must be empty, /api, or /api/v1",
+            InputValidation.serverUrl("https://monitor.example/dashboard"),
+        )
     }
 
     @Test fun validatesBackendTargetRules() {

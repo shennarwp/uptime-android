@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.TaskStackBuilder
@@ -112,16 +113,19 @@ class AlertWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
             applicationContext.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) return
         NotificationChannels.ensure(applicationContext)
+        val notificationTag = notificationTag(target.id, incidentType)
         val markReadIntent = Intent(applicationContext, NotificationActionReceiver::class.java).apply {
             action = NotificationActionReceiver.ACTION_MARK_READ
+            data = Uri.parse(notificationTag)
             putExtra(NotificationActionReceiver.EXTRA_TARGET_ID, target.id)
             putExtra(NotificationActionReceiver.EXTRA_INCIDENT_TYPE, incidentType)
             incidentTimestamp?.let { putExtra(NotificationActionReceiver.EXTRA_INCIDENT_TIMESTAMP, it) }
-            putExtra(NotificationActionReceiver.EXTRA_NOTIFICATION_ID, target.id.toInt())
+            putExtra(NotificationActionReceiver.EXTRA_NOTIFICATION_TAG, notificationTag)
+            putExtra(NotificationActionReceiver.EXTRA_NOTIFICATION_ID, NotificationActionReceiver.NOTIFICATION_ID)
         }
         val markReadPendingIntent = android.app.PendingIntent.getBroadcast(
             applicationContext,
-            target.id.toInt(),
+            NotificationReceiverIds.PENDING_INTENT_REQUEST_CODE,
             markReadIntent,
             android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
         )
@@ -133,10 +137,11 @@ class AlertWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
                 TaskStackBuilder.create(applicationContext).run {
                     addNextIntentWithParentStack(Intent(applicationContext, MainActivity::class.java).apply {
                         action = MainActivity.ACTION_OPEN_INCIDENTS
+                        data = Uri.parse(notificationTag)
                         putExtra(MainActivity.EXTRA_NOTIFICATION_TARGET_ID, target.id)
                         putExtra(MainActivity.EXTRA_NOTIFICATION_INCIDENT_TYPE, incidentType)
                     })
-                    getPendingIntent(target.id.toInt(), android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE)
+                    getPendingIntent(NotificationReceiverIds.PENDING_INTENT_REQUEST_CODE, android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE)
                 },
             )
             .addAction(
@@ -149,8 +154,15 @@ class AlertWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
-        NotificationManagerCompat.from(applicationContext).notify(target.id.toInt(), notification)
+        NotificationManagerCompat.from(applicationContext).notify(
+            notificationTag,
+            NotificationReceiverIds.NOTIFICATION_ID,
+            notification,
+        )
     }
+
+    private fun notificationTag(targetId: Long, incidentType: String): String =
+        "uptime://notification/$targetId/$incidentType"
 
     companion object { const val WORK_NAME = "uptime-alert-poll" }
 }
@@ -166,4 +178,9 @@ object NotificationChannels {
             },
         )
     }
+}
+
+private object NotificationReceiverIds {
+    const val NOTIFICATION_ID = 0
+    const val PENDING_INTENT_REQUEST_CODE = 0
 }

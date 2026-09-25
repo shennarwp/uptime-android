@@ -789,7 +789,7 @@ private fun IncidentView(
                                 Icon(
                                     Icons.Outlined.Check,
                                     contentDescription = "Mark incident as read",
-                                    tint = Color.Black,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                 )
                             }
                         }

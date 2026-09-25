@@ -12,6 +12,9 @@ This is the Android client backlog. Items describe work that belongs in this app
 - [ ] Add a biometric app lock using `BiometricPrompt`; keep the Keystore token encryption independent of the lock state.
 - [ ] Review notification permission denial and notification-channel settings in the Settings screen.
 - [ ] Revisit alert noise: the current worker follows the requested “any new down check” behavior, but a retry threshold or flap suppression is likely better for daily use.
+- [x] Give each notification target/type pair a collision-safe ID without truncating the target's `Long` ID, so down, recovery, and certificate alerts can coexist.
+- [x] Replace the notification status icon with a monochrome status-bar-safe asset; Android renders notification icons from their alpha mask.
+- [ ] Enable release optimization and shrinking, then build and install a release APK so the R8 configuration and keep rules are exercised before distribution.
 
 ## Medium priority app work
 
@@ -21,6 +24,8 @@ This is the Android client backlog. Items describe work that belongs in this app
 - [ ] Add an optional Glance widget only after the dashboard and worker behavior are stable.
 - [ ] Add a testable clock and injectable notification sender so worker tests do not depend on wall-clock time or Android notification APIs.
 - [ ] Decide whether a minimal local cache is worthwhile; offline database storage is currently out of scope.
+- [ ] Add unit coverage for AlertWorker certificate-alert buckets, notification incident matching, ViewModel login/logout and expired-auth transitions, and repository HTTP error mapping.
+- [ ] Split the growing MainActivity composables into focused dashboard, target-card, incident, and sheet files as the next feature work lands.
 
 ## Deliberately deferred
 
@@ -37,6 +42,8 @@ This is the Android client backlog. Items describe work that belongs in this app
 ## UI and project follow-ups
 
 - [ ] Keep app documentation current as setup, behavior, and release steps change.
-- [ ] Expand automated test coverage for dashboard behavior, notification navigation, and view-model logic.
+- [ ] Expand automated UI coverage for dashboard behavior and notification navigation.
 - [ ] Resolve remaining Android Studio/IDE warnings where practical.
 - [ ] Add Lefthook-managed local checks. Lefthook does not require `package.json`; use its native binary installer and configure Gradle tasks directly.
+- [x] Add Android lint to the test-and-build workflow. Detekt and ktlint remain deferred until the project adopts a Kotlin formatting and lint policy.
+- [x] Make server URL normalization accept the supported `/api` form and provide a specific validation message for unsupported paths, while preserving the canonical `/api/v1` base URL.
