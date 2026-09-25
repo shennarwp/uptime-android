@@ -63,13 +63,12 @@ The repository keeps text files as LF line endings across Windows, WSL, and Linu
 
 ## Secret scanning
 
-Enable the tracked Git hooks once per checkout:
+The script uses [Lefthook](https://lefthook.dev/), a standalone native binary; no `package.json`, Node.js, or npm is required. Install both tools in WSL before running it:
 
-```bash
-./scripts/install-git-hooks.sh
-```
+- [Install Lefthook](https://lefthook.dev/install/).
+- [Install Gitleaks](https://github.com/gitleaks/gitleaks#installation).
 
-The pre-push hook requires [Gitleaks](https://github.com/gitleaks/gitleaks#installation) and scans the commits being pushed before allowing the push. If Gitleaks is installed outside `PATH`, set `GITLEAKS_BIN` to its executable path.
+Then run `./scripts/install-git-hooks.sh` once per checkout. The configured pre-commit and pre-push checks run Gitleaks, Android lint, and the JVM unit tests. Git for Windows clients such as Sublime Merge are supported: the tracked hooks automatically bridge into WSL, so commits and pushes from Windows use the same checks.
 
 ## Project layout
 
