@@ -39,9 +39,17 @@ class AlertWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
                 if (newest != null) {
                     val oldState = nextStates[target.id.toString()]
                     if (newest.isUp && oldState == false) {
-                        notify(target, "Recovered", "${target.name} is back up", "going_up")
+                        notify(target, "Recovered", "${target.name} is back up", "going_up", newest.checkedAt)
                     }
-                    if (!newest.isUp) notify(target, "Down", downMessage(target, newest), "going_down")
+                    if (!newest.isUp) {
+                        notify(
+                            target,
+                            "Down",
+                            downMessage(target, newest),
+                            downIncidentType(newest),
+                            newest.checkedAt,
+                        )
+                    }
                     nextStates[target.id.toString()] = newest.isUp
                 }
                 certificateNotice(target, now, nextCertAlerts)
@@ -81,7 +89,25 @@ class AlertWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
         check.errorMessage?.takeIf(String::isNotBlank)?.let { append(": $it") }
     }
 
-    private fun notify(target: TargetWithChecks, title: String, text: String, incidentType: String) {
+    private fun downIncidentType(check: Check): String {
+        val error = check.errorMessage?.lowercase().orEmpty()
+        return when {
+            error.isBlank() -> "going_down"
+            "no such host" in error || "lookup" in error -> "dns_error"
+            "timeout" in error || "deadline exceeded" in error -> "timeout_error"
+            "connection refused" in error -> "connection_refused"
+            "tls" in error || "certificate" in error -> "tls_error"
+            else -> "network_error"
+        }
+    }
+
+    private fun notify(
+        target: TargetWithChecks,
+        title: String,
+        text: String,
+        incidentType: String,
+        incidentTimestamp: String? = null,
+    ) {
         if (android.os.Build.VERSION.SDK_INT >= 33 &&
             applicationContext.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) return
@@ -90,6 +116,7 @@ class AlertWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
             action = NotificationActionReceiver.ACTION_MARK_READ
             putExtra(NotificationActionReceiver.EXTRA_TARGET_ID, target.id)
             putExtra(NotificationActionReceiver.EXTRA_INCIDENT_TYPE, incidentType)
+            incidentTimestamp?.let { putExtra(NotificationActionReceiver.EXTRA_INCIDENT_TIMESTAMP, it) }
             putExtra(NotificationActionReceiver.EXTRA_NOTIFICATION_ID, target.id.toInt())
         }
         val markReadPendingIntent = android.app.PendingIntent.getBroadcast(
