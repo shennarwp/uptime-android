@@ -63,12 +63,6 @@ The repository keeps text files as LF line endings across Windows, WSL, and Linu
 
 ## Secret scanning
 
-Enable the tracked Git hooks once per checkout:
-
-```bash
-./scripts/install-git-hooks.sh
-```
-
 The script uses [Lefthook](https://lefthook.dev/), a standalone native binary; no `package.json`, Node.js, or npm is required. Install both tools in WSL before running it:
 
 - [Install Lefthook](https://lefthook.dev/install/).
