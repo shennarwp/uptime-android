@@ -70,8 +70,7 @@ tasks.register<JacocoReport>("jacocoDebugTestReport") {
     classDirectories.setFrom(
         fileTree(layout.buildDirectory) {
             include("tmp/kotlin-classes/debug/**/*.class")
-            include("intermediates/**/*.class")
-            include("intermediates/**/*.jar")
+            include("intermediates/javac/debug/**/*.class")
             exclude(
                 "**/R.class",
                 "**/R\$*.class",
@@ -83,8 +82,8 @@ tasks.register<JacocoReport>("jacocoDebugTestReport") {
     sourceDirectories.setFrom(files("src/main/java", "src/main/kotlin"))
     executionData.setFrom(
         fileTree(layout.buildDirectory) {
-            include("jacoco/testDebugUnitTest.exec")
-            include("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec")
+            include("**/*.exec")
+            include("**/*.ec")
         }
     )
 
