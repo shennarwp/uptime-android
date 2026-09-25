@@ -42,7 +42,15 @@ jobs:
         run: ./gradlew lint
 
       - name: Run unit tests with coverage
-        run: ./gradlew testDebugUnitTest jacocoDebugTestReport
+        run: ./gradlew testDebugUnitTest
+
+      - name: Inspect coverage inputs
+        run: |
+          find app/build -type f \( -name '*.exec' -o -name '*.ec' -o -name '*.class' -o -name '*.jar' \) \\
+            | sort | head -200
+
+      - name: Generate JaCoCo report
+        run: ./gradlew jacocoDebugTestReport
 
       - name: Validate JaCoCo report
         run: |
