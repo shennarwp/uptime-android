@@ -43,6 +43,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -78,6 +79,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -106,6 +109,8 @@ import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
+
+private val UptimeFontFamily = FontFamily(Font(R.font.georama))
 
 class MainActivity : ComponentActivity() {
     private val openIncidents = mutableStateOf(false)
@@ -194,7 +199,26 @@ private fun UptimeTheme(content: @Composable () -> Unit) {
             onSurfaceVariant = Color(0xFF6B7280),
         )
     }
-    MaterialTheme(colorScheme = colors, content = content)
+    val typography = Typography().let { base ->
+        base.copy(
+            displayLarge = base.displayLarge.copy(fontFamily = UptimeFontFamily),
+            displayMedium = base.displayMedium.copy(fontFamily = UptimeFontFamily),
+            displaySmall = base.displaySmall.copy(fontFamily = UptimeFontFamily),
+            headlineLarge = base.headlineLarge.copy(fontFamily = UptimeFontFamily),
+            headlineMedium = base.headlineMedium.copy(fontFamily = UptimeFontFamily),
+            headlineSmall = base.headlineSmall.copy(fontFamily = UptimeFontFamily),
+            titleLarge = base.titleLarge.copy(fontFamily = UptimeFontFamily),
+            titleMedium = base.titleMedium.copy(fontFamily = UptimeFontFamily),
+            titleSmall = base.titleSmall.copy(fontFamily = UptimeFontFamily),
+            bodyLarge = base.bodyLarge.copy(fontFamily = UptimeFontFamily),
+            bodyMedium = base.bodyMedium.copy(fontFamily = UptimeFontFamily),
+            bodySmall = base.bodySmall.copy(fontFamily = UptimeFontFamily),
+            labelLarge = base.labelLarge.copy(fontFamily = UptimeFontFamily),
+            labelMedium = base.labelMedium.copy(fontFamily = UptimeFontFamily),
+            labelSmall = base.labelSmall.copy(fontFamily = UptimeFontFamily),
+        )
+    }
+    MaterialTheme(colorScheme = colors, typography = typography, content = content)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
