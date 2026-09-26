@@ -346,6 +346,7 @@ private fun UptimeScreen(
                 onEdit = { editing = it },
                 onDelete = { deleting = it },
                 onRefresh = { model.refresh() },
+                onHistoryWidthChange = model::updateChecksLimit,
             )
         }
     }
@@ -411,6 +412,7 @@ private fun Dashboard(
     onEdit: (TargetWithChecks) -> Unit,
     onDelete: (TargetWithChecks) -> Unit,
     onRefresh: () -> Unit,
+    onHistoryWidthChange: (Int) -> Unit,
 ) {
     Column(modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(vertical = 8.dp)) }
@@ -423,6 +425,7 @@ private fun Dashboard(
                     onEdit = onEdit,
                     onDelete = onDelete,
                     onRefresh = onRefresh,
+                    onHistoryWidthChange = onHistoryWidthChange,
                 )
             } else {
                 PullToRefreshBox(
@@ -435,7 +438,7 @@ private fun Dashboard(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         contentPadding = PaddingValues(top = 8.dp, bottom = 88.dp),
                     ) {
-                        items(targets, key = { it.id }) { target -> TargetCard(target, onEdit, onDelete) }
+                        items(targets, key = { it.id }) { target -> TargetCard(target, onEdit, onDelete, onHistoryWidthChange = onHistoryWidthChange) }
                         DashboardFooter(targets.size, lastSyncAt)
                     }
                 }
@@ -452,6 +455,7 @@ private fun TabletDashboard(
     onEdit: (TargetWithChecks) -> Unit,
     onDelete: (TargetWithChecks) -> Unit,
     onRefresh: () -> Unit,
+    onHistoryWidthChange: (Int) -> Unit,
 ) {
     var selectedId by rememberSaveable { mutableStateOf<Long?>(null) }
     var highlightedId by remember { mutableStateOf<Long?>(null) }
@@ -535,6 +539,7 @@ private fun TabletDashboard(
                         onEdit = onEdit,
                         onDelete = onDelete,
                         highlighted = highlightedId == target.id,
+                        onHistoryWidthChange = onHistoryWidthChange,
                     )
                 }
                 DashboardFooter(targets.size, lastSyncAt)
@@ -565,6 +570,7 @@ private fun TargetCard(
     onEdit: (TargetWithChecks) -> Unit,
     onDelete: (TargetWithChecks) -> Unit,
     highlighted: Boolean = false,
+    onHistoryWidthChange: (Int) -> Unit = {},
 ) {
     val cardScale by animateFloatAsState(if (highlighted) 1.02f else 1f, label = "target-highlight")
     val latest = latestCheck(target.checks)
@@ -608,7 +614,7 @@ private fun TargetCard(
                 }
             }
             Spacer(Modifier.height(6.dp))
-            HistoryBar(target.checks)
+            HistoryBar(target.checks, onWidthChange = onHistoryWidthChange)
             TargetMetadata(
                 latest = latest,
                 certExpiresAt = target.certExpiresAt,
@@ -711,8 +717,9 @@ private fun certificateColor(level: CertificateLevel): Color = when (level) {
 }
 
 @Composable
-private fun HistoryBar(checks: List<Check>) {
+private fun HistoryBar(checks: List<Check>, onWidthChange: (Int) -> Unit = {}) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
+        onWidthChange(maxWidth.value.toInt())
         val slots = maxOf(1, (maxWidth / 8.dp).toInt())
         val chronological = checksNewestFirst(checks).take(slots).reversed()
         Row(Modifier.fillMaxWidth().height(18.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {

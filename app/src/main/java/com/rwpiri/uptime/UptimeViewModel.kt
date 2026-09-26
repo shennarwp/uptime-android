@@ -29,6 +29,7 @@ data class UptimeUiState(
 class UptimeViewModel(private val repository: UptimeRepository) : ViewModel() {
     private val _state = MutableStateFlow(UptimeUiState())
     val state: StateFlow<UptimeUiState> = _state.asStateFlow()
+    private var checksLimit = 300
 
     init { refresh() }
 
@@ -40,9 +41,17 @@ class UptimeViewModel(private val repository: UptimeRepository) : ViewModel() {
             val url = repository.serverUrl()
             val loggedIn = repository.getToken() != null
             if (url.isBlank()) UptimeUiState(loading = false, serverUrl = url, loggedIn = loggedIn)
-            else UptimeUiState(false, repository.targets(), url, loggedIn, lastSyncAt = Instant.now().toString(), incidents = if (loggedIn) repository.incidents() else emptyList())
+            else UptimeUiState(false, repository.targets(checksLimit), url, loggedIn, lastSyncAt = Instant.now().toString(), incidents = if (loggedIn) repository.incidents() else emptyList())
         }.onSuccess { _state.value = it.copy(refreshing = false) }
             .onFailure { _state.value = _state.value.copy(loading = false, refreshing = false, error = it.message ?: "Request failed") }
+    }
+
+    fun updateChecksLimit(widthDp: Int) {
+        val visibleChecks = widthDp / 8
+        val nextLimit = kotlin.math.ceil(visibleChecks * 1.25).toInt().coerceAtLeast(1).coerceAtMost(500)
+        if (kotlin.math.abs(nextLimit - checksLimit) < 16) return
+        checksLimit = nextLimit
+        refresh()
     }
 
     fun saveServerUrl(url: String) = viewModelScope.launch {

@@ -34,7 +34,7 @@ This is the Android client backlog. Items describe work that belongs in this app
 
 ## Backend context to keep visible
 
-- [ ] The server's `GET /targets` response can contain up to 1,500 checks per target; add pagination or a bounded history endpoint before large installations make dashboard refreshes expensive.
+- [ ] The Android client now sends the backend's bounded `checks_limit` history request (default 300, maximum 500); add full pagination and status filtering before large installations make dashboard refreshes expensive.
 - [ ] Add auth rate limiting and consider replacing a long-lived shared token with a more constrained credential model.
 - [ ] Add external heartbeat monitoring because the monitor cannot report its own outage.
 - [ ] Keep the backend README and generated Swagger contract synchronized; the Android client should follow generated Swagger, not stale prose.
@@ -45,4 +45,3 @@ This is the Android client backlog. Items describe work that belongs in this app
 - [ ] Keep app documentation current as setup, behavior, and release steps change.
 - [ ] Expand automated UI coverage for dashboard behavior and notification navigation.
 - [ ] Resolve remaining Android Studio/IDE warnings where practical.
-
