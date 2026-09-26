@@ -61,6 +61,14 @@ Each notification has a target and incident-type tag, allowing down, recovery, a
 
 The repository keeps text files as LF line endings across Windows, WSL, and Linux. `.gitattributes` and `.editorconfig` set this for Git and supported editors; Windows batch scripts use CRLF. Use `gradlew.bat` on Windows or `./gradlew` on Linux/WSL. Each machine should generate its own ignored `local.properties` for the Android SDK path.
 
+When committing or pushing from Sublime Merge on Windows, the tracked Git hook bridges into WSL and runs Lefthook there. Lefthook then runs the Gradle lint and unit-test tasks inside WSL:
+
+```text
+Sublime Merge → Git for Windows hook → WSL → Lefthook → Gradle
+```
+
+Android Studio on Windows and Gradle inside WSL require separate SDK installations. The Windows SDK path in `local.properties` can be used by Android Studio, but WSL Gradle needs a Linux Android SDK with Linux tools such as `aapt`. Configure the WSL SDK through `ANDROID_SDK_ROOT`/`ANDROID_HOME` and install the required platform and Build Tools packages there. Do not use the Windows SDK under `/mnt/c` as the WSL Gradle SDK; Windows executables such as `aapt.exe` are reported as missing or corrupted by Linux Gradle.
+
 ## Secret scanning
 
 The script uses [Lefthook](https://lefthook.dev/), a standalone native binary; no `package.json`, Node.js, or npm is required. Install both tools in WSL before running it:
