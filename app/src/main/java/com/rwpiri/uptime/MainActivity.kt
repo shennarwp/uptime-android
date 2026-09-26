@@ -332,9 +332,11 @@ private fun UptimeScreen(
             state.serverUrl.isBlank() -> EmptyState("Set the server URL in Settings to connect.", Modifier.padding(padding))
             else -> if (showIncidentView) IncidentView(
                 incidents = state.incidents,
+                refreshing = state.refreshing,
                 modifier = Modifier.padding(padding),
                 onBack = { showIncidentView = false },
                 onMarkRead = model::markIncidentRead,
+                onRefresh = { model.refresh() },
             ) else Dashboard(
                 targets = state.targets,
                 error = state.error,
@@ -752,9 +754,11 @@ private val incidentLabels = mapOf(
 @Composable
 private fun IncidentView(
     incidents: List<Incident>,
+    refreshing: Boolean,
     modifier: Modifier,
     onBack: () -> Unit,
     onMarkRead: (Long) -> Unit,
+    onRefresh: () -> Unit,
 ) {
     val incidentBorder = MaterialTheme.colorScheme.outline
     Column(modifier.fillMaxSize().padding(horizontal = 16.dp)) {
@@ -771,15 +775,20 @@ private fun IncidentView(
             }
             Spacer(Modifier.size(48.dp))
         }
-        if (incidents.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No incidents yet.") }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(bottom = 16.dp),
-            ) {
-                items(incidents, key = { it.id }) { incident ->
+        PullToRefreshBox(
+            isRefreshing = refreshing,
+            onRefresh = onRefresh,
+            modifier = Modifier.weight(1f),
+        ) {
+            if (incidents.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No incidents yet.") }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 16.dp),
+                ) {
+                    items(incidents, key = { it.id }) { incident ->
                     Row(
                         Modifier
                             .fillMaxWidth()
@@ -817,6 +826,7 @@ private fun IncidentView(
                                 )
                             }
                         }
+                    }
                     }
                 }
             }
