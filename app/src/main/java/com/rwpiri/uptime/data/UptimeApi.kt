@@ -21,7 +21,7 @@ import java.net.URISyntaxException
 
 interface UptimeApi {
     @GET("targets")
-    suspend fun getTargets(): List<TargetWithChecks>
+    suspend fun getTargets(@Query("checks_limit") checksLimit: Int? = null): List<TargetWithChecks>
 
     @POST("auth/verify")
     suspend fun verifyToken(@Header("Authorization") authorization: String)

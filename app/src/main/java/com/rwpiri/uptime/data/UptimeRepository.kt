@@ -9,7 +9,8 @@ class UptimeRepository(
     private val settings: SettingsStore,
     private val tokens: EncryptedTokenStore,
 ) {
-    suspend fun targets(): List<TargetWithChecks> = api().getTargets()
+    suspend fun targets(checksLimit: Int = 300): List<TargetWithChecks> =
+        api().getTargets(checksLimit.takeUnless { it == 300 })
 
     suspend fun verifyAndSaveToken(token: String) {
         try { api().verifyToken(bearer(token)) }
