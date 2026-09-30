@@ -2,6 +2,10 @@
 
 Native Android client for the existing self-hosted Uptime Monitor backend. The app is Kotlin and Jetpack Compose, with a small manual dependency container. It does not run checks on the phone: the server remains the source of monitoring data.
 
+## Screenshot
+
+<img src="docs/images/screenshot.png" alt="Uptime Android app screens" />
+
 ## Requirements
 
 - Android Studio with support for Android Gradle Plugin 9.4.1.
